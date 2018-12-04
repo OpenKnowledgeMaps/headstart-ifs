@@ -51,13 +51,13 @@ sudo apt-get install cassandra
 
 ### Docker-compose
 
-`sudo service docker-compose build`
+`sudo docker-compose build`
 
-`sudo service docker-compose up -d`
+`sudo docker-compose up -d`
 
 DO THIS ONLY IN THE BEGINNING! DATA WILL BE LOST
 `docker-compose exec ifs python manage.py recreate_db`
 
-`sudo service docker-compose down`
+`sudo docker-compose down`
 
 ### Alternative: kubernetes
