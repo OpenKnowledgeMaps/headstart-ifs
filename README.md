@@ -1,5 +1,7 @@
 ## Setup
 
+* Currently we only use docker-compose because we have a single application which is not spread out across clusters.
+
 ### Install docker and docker-compose
 
 * https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-docker-ce-1
@@ -55,9 +57,14 @@ sudo apt-get install cassandra
 
 `sudo docker-compose up -d`
 
-DO THIS ONLY IN THE BEGINNING! DATA WILL BE LOST
-`docker-compose exec ifs python manage.py recreate_db`
+* DO THIS ONLY IN THE BEGINNING! DATA WILL BE LOST
+`sudo docker-compose exec ifs python manage.py recreate_db`
 
 `sudo docker-compose down`
 
+* if source code changed:
+`sudo docker up --build`
+
 ### Alternative: kubernetes
+
+to be done
