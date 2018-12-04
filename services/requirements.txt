@@ -1,0 +1,4 @@
+flask
+gunicorn
+flask_cqlalchemy
+redis

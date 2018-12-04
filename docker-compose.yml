@@ -1,0 +1,116 @@
+version: '3.7'
+
+services:
+
+    redis:
+      image: 'redis:4.0-alpine'
+      restart: always
+      command: redis-server
+      volumes:
+         - 'redis:/var/lib/redis/data'
+      ports:
+        - '6379:6379'
+
+    # cassandra:
+    #   image: 'cassandra:3.11.3'
+    #   restart: always
+    #   volumes:
+    #     - /var/lib/cassandra/data
+    #   ports:
+    #     - "9042:9042"
+
+    ifs:
+      build:
+        context: ./services
+        dockerfile: Dockerfile
+      command: >
+       /bin/bash -c "sleep 10; gunicorn -b 0.0.0.0:5001 'app:new_ifs_app()'"
+      restart: always
+      ports:
+        - '5001:5001'
+      depends_on:
+        - redis
+        # - cassandra
+      network_mode: "host"
+
+    tagger:
+      build:
+        context: ./services
+        dockerfile: Dockerfile
+      command: >
+       /bin/bash -c "sleep 10; gunicorn -b 0.0.0.0:5002 'app:new_tagging_app()'"
+      restart: always
+      ports:
+        - '5002:5002'
+      depends_on:
+        - redis
+        # - cassandra
+      network_mode: "host"
+
+    batch-pos-executor_en:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile
+      command: 'python batch_pos_executor_en.py'
+      # restart: always
+      depends_on:
+        - redis
+      deploy:
+        mode: replicated
+        replicas: 1
+        resources:
+          limits:
+            memory: 2G
+      network_mode: "host"
+
+    batch-ner-executor_en:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile
+      command: 'python batch_ner_executor_en.py'
+      # restart: always
+      depends_on:
+        - redis
+      deploy:
+        mode: replicated
+        replicas: 1
+        resources:
+          limits:
+            memory: 2G
+      network_mode: "host"
+
+    batch-pos-executor_de:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile
+      command: 'python batch_pos_executor_de.py'
+      # restart: always
+      depends_on:
+        - redis
+      deploy:
+        mode: replicated
+        replicas: 1
+        resources:
+          limits:
+            memory: 2G
+      network_mode: "host"
+
+    batch-ner-executor_de:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile
+      command: 'python batch_ner_executor_de.py'
+      # restart: always
+      depends_on:
+        - redis
+      deploy:
+        mode: replicated
+        replicas: 1
+        resources:
+          limits:
+            memory: 2G
+      network_mode: "host"
+
+volumes:
+  redis:
+  # cassandra:
