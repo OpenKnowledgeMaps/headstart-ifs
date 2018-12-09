@@ -29,13 +29,15 @@ class SpacyTagger(object):
                 for nc in doc.noun_chunks if len(nc) > 0]
 
     def get_noun_chunks_batch(self, docs):
-        noun_chunks = [[" ".join([str(t) for t in nc if t.is_stop is False])
+        noun_chunks = [[" ".join([str(t) for t in nc if (t.is_stop is False
+                                                         and str(t) != "")])
                         for nc in d.noun_chunks if len(nc) > 0]
                        for d in self.nlp.pipe(docs)]
+        noun_chunks = [nc for nc in noun_chunks if nc != ""]
         return noun_chunks
 
     def get_entities_batch(self, docs):
-        entities = [[str(e) for e in d.ents]
+        entities = [[str(e) for e in d.ents if str(e) != ""]
                     for d in self.nlp.pipe(docs)]
         return entities
 
