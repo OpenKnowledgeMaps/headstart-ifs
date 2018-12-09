@@ -2,6 +2,7 @@
 
 ### Install docker and docker-compose
 
+* Note: some of the commands may have to be run with `sudo`
 * https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-docker-ce-1
 ```
 apt-get remove docker docker-engine docker.io
