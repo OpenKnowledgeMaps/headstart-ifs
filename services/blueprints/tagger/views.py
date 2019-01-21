@@ -12,7 +12,33 @@ app = Blueprint('tagger', __name__)
 
 @app.route('/')
 def main():
-    return redirect('/index')
+    return "Hello World!"
+
+
+@app.route('/batch_lang_detect', methods=['GET', 'POST'])
+def batch_lang_detect():
+    response = {"success": False}
+    if request.method == 'POST':
+        r = request.get_json()
+        docs = r.get('docs', [])
+        if len(docs) is 0:
+            response["msg"] = "No documents provided"
+            return jsonify(response)
+
+        k = str(uuid.uuid4())
+        d = {"id": k, "docs": docs}
+        redis_store.rpush("batch_lang_detect", json.dumps(d))
+        while True:
+            result = redis_store.get(k)
+            if result is not None:
+                result = json.loads(result.decode('utf-8'))
+                langs = result.get('detected_langs')
+                response["detected_langs"] = langs
+                redis_store.delete(k)
+                break
+            time.sleep(0.5)
+        response["success"] = True
+    return jsonify(response)
 
 
 @app.route('/tag', methods=['GET', 'POST'])
@@ -95,6 +121,36 @@ def batch_ne():
                 result = json.loads(result.decode('utf-8'))
                 entities = result.get('entities')
                 response["entities"] = entities
+                redis_store.delete(k)
+                break
+            time.sleep(0.5)
+        response["success"] = True
+    return jsonify(response)
+
+
+@app.route('/batch_tokenize', methods=['GET', 'POST'])
+def batch_tokenize():
+    response = {"success": False}
+    if request.method == 'POST':
+        r = request.get_json()
+        lang = r.get('lang')
+        docs = r.get('docs', [])
+        if lang is None:
+            response["msg"] = "No language provided, add <lang> to request"
+            return jsonify(response)
+        if len(docs) is 0:
+            response["msg"] = "No documents provided"
+            return jsonify(response)
+
+        k = str(uuid.uuid4())
+        d = {"id": k, "docs": docs}
+        redis_store.rpush("batch_tokenize_"+lang, json.dumps(d))
+        while True:
+            result = redis_store.get(k)
+            if result is not None:
+                result = json.loads(result.decode('utf-8'))
+                tokens = result.get('tokens')
+                response['tokens'] = tokens
                 redis_store.delete(k)
                 break
             time.sleep(0.5)
