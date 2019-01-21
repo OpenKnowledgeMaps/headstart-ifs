@@ -47,7 +47,7 @@ services:
         # - cassandra
       network_mode: "host"
 
-    batch-pos-executor_en:
+    batch_pos_executor_en:
       build:
         context: ./workers
         dockerfile: Dockerfile
@@ -63,7 +63,7 @@ services:
             memory: 2G
       network_mode: "host"
 
-    batch-ner-executor_en:
+    batch_ner_executor_en:
       build:
         context: ./workers
         dockerfile: Dockerfile
@@ -79,7 +79,7 @@ services:
             memory: 2G
       network_mode: "host"
 
-    batch-pos-executor_de:
+    batch_pos_executor_de:
       build:
         context: ./workers
         dockerfile: Dockerfile
@@ -95,11 +95,43 @@ services:
             memory: 2G
       network_mode: "host"
 
-    batch-ner-executor_de:
+    batch_ner_executor_de:
       build:
         context: ./workers
         dockerfile: Dockerfile
       command: 'python batch_ner_executor_de.py'
+      # restart: always
+      depends_on:
+        - redis
+      deploy:
+        mode: replicated
+        replicas: 1
+        resources:
+          limits:
+            memory: 2G
+      network_mode: "host"
+
+    batch_lang_detector:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile
+      command: 'python batch_lang_detector.py'
+      # restart: always
+      depends_on:
+        - redis
+      deploy:
+        mode: replicated
+        replicas: 1
+        resources:
+          limits:
+            memory: 2G
+      network_mode: "host"
+
+    batch_tokenizer_en:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile
+      command: 'python batch_tokenizer_en.py'
       # restart: always
       depends_on:
         - redis
