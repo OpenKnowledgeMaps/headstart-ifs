@@ -2,12 +2,10 @@ from flask import Flask
 
 # from app.models import Documents
 from databases import db
-from blueprints.tagger.views import app as tagger
-from blueprints.ifs.views import app as ifs
-from blueprints.summarizer.views import app as summarizer
 
 
 def new_ifs_app(settings_override=None):
+    from blueprints.ifs.views import app as ifs
     app = Flask('ifs', instance_relative_config=True)
 
     app.config.from_object('config.settings')
@@ -25,6 +23,7 @@ def new_ifs_app(settings_override=None):
 
 
 def new_tagging_app(settings_override=None):
+    from blueprints.tagger.views import app as tagger
     app = Flask('tagger', instance_relative_config=True)
 
     app.config.from_object('config.settings')
@@ -43,10 +42,15 @@ def new_tagging_app(settings_override=None):
 
 
 def new_summarization_app(settings_override=None):
+    from blueprints.summarizer.views import app as summarizer
     app = Flask('summarizer', instance_relative_config=True)
 
     app.config.from_object('config.settings')
     app.config.from_pyfile('settings.py', silent=True)
+    # csrf = CSRFProtect(app)
+    app.config.update(dict(
+        CASSANDRA_KEYSPACE="documents"
+    ))
 
     app.register_blueprint(summarizer)
 
