@@ -1,7 +1,6 @@
 import time
 import json
 import redis
-import os
 from gensim.models import KeyedVectors
 
 redis_store = redis.StrictRedis(host="localhost", port=6379, db=0)
@@ -9,10 +8,9 @@ redis_store = redis.StrictRedis(host="localhost", port=6379, db=0)
 
 class Embedder(object):
 
-    def __init__(self, model_path, model_name):
+    def __init__(self, model_name):
         """model_path: headstart-models/models"""
-        path = os.path.join(model_path, model_name)
-        self.model = KeyedVectors.load(path)
+        self.model = KeyedVectors.load(model_name)
 
     def get_wordvec(self, word):
         try:
@@ -45,8 +43,7 @@ class Embedder(object):
 
 
 def run_embed_process_batch():
-    embedder = Embedder(model_path="/home/chris/projects/OpenKnowledgeMaps/headstart-models/models",
-                        model_name="core2vec_model_en")
+    embedder = Embedder(model_name="w2v_model_en")
     while True:
         q = redis_store.lpop('batch_embed')
         if q is not None:
@@ -64,8 +61,7 @@ def run_embed_process_batch():
 
 
 def run_embed_noun_chunks_process():
-    embedder = Embedder(model_path="/home/chris/projects/OpenKnowledgeMaps/headstart-models/models",
-                        model_name="core2vec_model_en")
+    embedder = Embedder(model_name="w2v_model_en")
     while True:
         q = redis_store.lpop('embed_noun_chunks')
         if q is not None:
@@ -83,8 +79,7 @@ def run_embed_noun_chunks_process():
 
 
 def run_embed_noun_chunks_process_batch():
-    embedder = Embedder(model_path="/home/chris/projects/OpenKnowledgeMaps/headstart-models/models",
-                        model_name="core2vec_model_en")
+    embedder = Embedder(model_name="w2v_model_en")
     while True:
         q = redis_store.lpop('batch_embed_noun_chunks')
         if q is not None:
