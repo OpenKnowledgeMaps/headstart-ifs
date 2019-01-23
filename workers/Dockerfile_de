@@ -8,5 +8,5 @@ WORKDIR /workers
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
-COPY . .
+COPY *.py ./
 RUN python -m spacy download de_core_news_sm

@@ -65,7 +65,7 @@ services:
       build:
         context: ./workers
         dockerfile: Dockerfile_en
-      command: 'python batch_pos_executor_en.py'
+      command: 'python run_tagger.py --type POS --lang en --batch'
       # restart: always
       depends_on:
         - redis
@@ -81,7 +81,7 @@ services:
       build:
         context: ./workers
         dockerfile: Dockerfile_en
-      command: 'python batch_ner_executor_en.py'
+      command: 'python run_tagger.py --type NER --lang en --batch'
       # restart: always
       depends_on:
         - redis
@@ -97,7 +97,7 @@ services:
       build:
         context: ./workers
         dockerfile: Dockerfile_de
-      command: 'python batch_pos_executor_de.py'
+      command: 'python run_tagger.py --type POS --lang de --batch'
       # restart: always
       depends_on:
         - redis
@@ -113,7 +113,7 @@ services:
       build:
         context: ./workers
         dockerfile: Dockerfile_de
-      command: 'python batch_ner_executor_de.py'
+      command: 'python run_tagger.py --type NER --lang de --batch'
       # restart: always
       depends_on:
         - redis
@@ -145,7 +145,7 @@ services:
       build:
         context: ./workers
         dockerfile: Dockerfile_en
-      command: 'python batch_tokenizer_en.py'
+      command: 'python run_tagger.py --type TOKEN --lang en --batch'
       # restart: always
       depends_on:
         - redis

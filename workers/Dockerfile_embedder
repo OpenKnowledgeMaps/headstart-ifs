@@ -8,6 +8,6 @@ WORKDIR /workers
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
-COPY . .
-COPY ../../headstart-models/models/w2v_model_en .
-COPY ../../headstart-models/models/w2v_model_en.vectors.npy .
+COPY *.py ./
+COPY models/w2v_model_en .
+COPY models/w2v_model_en.vectors.npy .
