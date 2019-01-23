@@ -1,0 +1,6 @@
+flask
+gunicorn
+flask_cqlalchemy
+redis
+scikit-learn
+networkx

@@ -4,6 +4,7 @@ from flask import Flask
 from databases import db
 from blueprints.tagger.views import app as tagger
 from blueprints.ifs.views import app as ifs
+from blueprints.summarizer import app as summarizer
 
 
 def new_ifs_app(settings_override=None):
@@ -37,5 +38,16 @@ def new_tagging_app(settings_override=None):
     # db.sync_table(Documents, keyspaces=['documents'], connections=None)
 
     app.register_blueprint(tagger)
+
+    return app
+
+
+def new_summarization_app(settings_override=None):
+    app = Flask('summarizer', instance_relative_config=True)
+
+    app.config.from_object('config.settings')
+    app.config.from_pyfile('settings.py', silent=True)
+
+    app.register_blueprint(summarizer)
 
     return app
