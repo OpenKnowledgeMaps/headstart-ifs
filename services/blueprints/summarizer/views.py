@@ -1,7 +1,7 @@
 import time
 import uuid
 import json
-from flask import Blueprint, redirect, request, jsonify
+from flask import Blueprint, request, jsonify
 import redis
 import numpy as np
 import networkx as nx
@@ -30,12 +30,25 @@ def summarize_doc():
         r = request.get_json()
         method = r.get('method')
         top_n = r.get('top_n')
+        lang = r.get('lang')
 
         if method == 'noun_chunks':
             doc = r.get('doc')
+            # get noun_chunks
+            k = str(uuid.uuid4())
+            d = {"id": k, "docs": [doc]}
+            redis_store.rpush("batch_pos_"+lang, json.dumps(d))
+            while True:
+                result = redis_store.get(k)
+                if result is not None:
+                    result = json.loads(result.decode('utf-8'))
+                    noun_chunks = result.get('noun_chunks')[0]
+                    redis_store.delete(k)
+                    break
+                time.sleep(0.5)
             # get nc embeddings
             k = str(uuid.uuid4())
-            d = {"id": k, "doc": doc}
+            d = {"id": k, "doc": noun_chunks}
             redis_store.rpush("embed_noun_chunks", json.dumps(d))
             while True:
                 result = redis_store.get(k)
@@ -45,9 +58,11 @@ def summarize_doc():
                     redis_store.delete(k)
                     break
                 time.sleep(0.5)
-            res = [(x, y) for x, y in zip(doc, embeddings) if y is not None]
+            res = [(x, np.array(y))
+                   for x, y in zip(noun_chunks, embeddings)
+                   if y is not None]
             # average over noun chunk word vectors for each noun_chunk
-            doc = [r[0] for r in res]
+            noun_chunks = [r[0] for r in res]
             embeddings = [r[1] for r in res]
             # summarise with textrank
             sim_mat = cosine_similarity(embeddings)
@@ -55,7 +70,7 @@ def summarize_doc():
             nx_graph = nx.from_numpy_array(sim_mat)
             scores = nx.pagerank(nx_graph)
             ranked_nc = sorted(((scores[i], nc)
-                                for i, nc in enumerate(doc)), reverse=True)
+                                for i, nc in enumerate(noun_chunks)), reverse=True)
             response["summary"] = ", ".join([rnc[1]
                                             for rnc in ranked_nc[:top_n]])
             response["success"] = True
