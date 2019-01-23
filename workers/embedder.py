@@ -24,7 +24,7 @@ class Embedder(object):
         wordvecs = [self.get_wordvec(t) for t in doc]
         wordvecs = [wv for wv in wordvecs if wv is not None]
         if len(wordvecs) > 0:
-            return sum(wordvecs) / len(wordvecs)
+            return (sum(wordvecs) / len(wordvecs)).tolist()
 
     def get_docvecs_batch(self, docs):
         return [self.get_docvec(doc) for doc in docs]
