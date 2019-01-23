@@ -45,9 +45,10 @@ def summarize_doc():
                     redis_store.delete(k)
                     break
                 time.sleep(0.5)
+            res = [(x, y) for x, y in zip(doc, embeddings) if y is not None]
             # average over noun chunk word vectors for each noun_chunk
-            embeddings = [sum(e)/len(e) if len(e) > 0 else np.zeros(300)
-                          for e in embeddings]
+            doc = [r[0] for r in res]
+            embeddings = [r[1] for r in res]
             # summarise with textrank
             sim_mat = cosine_similarity(embeddings)
             np.fill_diagonal(sim_mat, 0)

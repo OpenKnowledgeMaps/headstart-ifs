@@ -2,7 +2,7 @@ import time
 import json
 import redis
 import os
-from gensim.models import Doc2Vec
+from gensim.models import KeyedVectors
 
 redis_store = redis.StrictRedis(host="localhost", port=6379, db=0)
 
@@ -12,11 +12,21 @@ class Embedder(object):
     def __init__(self, model_path, model_name):
         """model_path: headstart-models/models"""
         path = os.path.join(model_path, model_name)
-        self.model = Doc2Vec.load(path)
+        self.model = KeyedVectors.load(path)
+
+    def get_wordvec(self, word):
+        try:
+            return self.model.wv.get_vector(word)
+        except KeyError:
+            pass
 
     def get_docvec(self, doc):
+        # defunct
         """doc should be a list of tokens"""
-        return self.model.infer_vector(doc, epochs=30)
+        wordvecs = [self.get_wordvec(t) for t in doc]
+        wordvecs = [wv for wv in wordvecs if wv is not None]
+        if len(wordvecs) > 0:
+            return sum(wordvecs) / len(wordvecs)
 
     def get_docvecs_batch(self, docs):
         return [self.get_docvec(doc) for doc in docs]
@@ -25,7 +35,8 @@ class Embedder(object):
         """
         doc is a list of noun_chunks
         """
-        return [self.get_docvecs_batch(nc.lower().split()) for nc in doc]
+        docvecs = [self.get_docvec(nc.lower().split()) for nc in doc]
+        return docvecs
 
     def embed_noun_chunks_batch(self, docs):
         """docs is a list of docs which are lists of noun_chunks"""
