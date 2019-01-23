@@ -15,7 +15,7 @@ class SpacyTagger(object):
     def get_lang_resource(language):
         valid_langs = {
             "en": "en_core_web_sm",
-            "german": "de_core_news_sm"
+            "de": "de_core_news_sm"
         }
         return valid_langs.get(language, 'en_core_web_sm')
 

@@ -4,7 +4,7 @@ from flask import Flask
 from databases import db
 from blueprints.tagger.views import app as tagger
 from blueprints.ifs.views import app as ifs
-from blueprints.summarizer import app as summarizer
+from blueprints.summarizer.views import app as summarizer
 
 
 def new_ifs_app(settings_override=None):

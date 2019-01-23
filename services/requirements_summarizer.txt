@@ -2,5 +2,6 @@ flask
 gunicorn
 flask_cqlalchemy
 redis
+numpy
 scikit-learn
 networkx

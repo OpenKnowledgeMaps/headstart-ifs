@@ -3,10 +3,9 @@ import tagger
 
 
 parser = argparse.ArgumentParser(description="Run tagging processes")
-parser.add_argument('--type', description="Either NER, POS, TOKEN")
-parser.add_argument('--lang', description="Language, one of ['en', 'de']")
-parser.add_argument('--batch', action='store_true',
-                    description="Batch process? BOOL")
+parser.add_argument('--type', help="Either NER, POS, TOKEN")
+parser.add_argument('--lang', help="Language, one of ['en', 'de']")
+parser.add_argument('--batch', action='store_true', help="Batch process? BOOL")
 args = parser.parse_args()
 
 
