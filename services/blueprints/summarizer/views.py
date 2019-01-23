@@ -30,22 +30,9 @@ def summarize_doc():
         r = request.get_json()
         method = r.get('method')
         top_n = r.get('top_n')
-        lang = r.get('lang')
 
         if method == 'noun_chunks':
-            doc = r.get('doc')
-            # get noun_chunks
-            k = str(uuid.uuid4())
-            d = {"id": k, "docs": [doc]}
-            redis_store.rpush("batch_pos_"+lang, json.dumps(d))
-            while True:
-                result = redis_store.get(k)
-                if result is not None:
-                    result = json.loads(result.decode('utf-8'))
-                    noun_chunks = result.get('noun_chunks')[0]
-                    redis_store.delete(k)
-                    break
-                time.sleep(0.5)
+            noun_chunks = json.loads(r.get('doc'))
             # get nc embeddings
             k = str(uuid.uuid4())
             d = {"id": k, "doc": noun_chunks}
