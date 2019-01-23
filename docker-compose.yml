@@ -47,10 +47,24 @@ services:
         # - cassandra
       network_mode: "host"
 
+    summarizer:
+      build:
+        context: ./services
+        dockerfile: Dockerfile_summarizer
+      command: >
+       /bin/bash -c "sleep 10; gunicorn -b 0.0.0.0:5003 'app:new_summarization_app()'"
+      restart: always
+      ports:
+        - '5003:5003'
+      depends_on:
+        - redis
+        # - cassandra
+      network_mode: "host"
+
     batch_pos_executor_en:
       build:
         context: ./workers
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile_en
       command: 'python batch_pos_executor_en.py'
       # restart: always
       depends_on:
@@ -66,7 +80,7 @@ services:
     batch_ner_executor_en:
       build:
         context: ./workers
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile_en
       command: 'python batch_ner_executor_en.py'
       # restart: always
       depends_on:
@@ -82,7 +96,7 @@ services:
     batch_pos_executor_de:
       build:
         context: ./workers
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile_de
       command: 'python batch_pos_executor_de.py'
       # restart: always
       depends_on:
@@ -98,7 +112,7 @@ services:
     batch_ner_executor_de:
       build:
         context: ./workers
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile_de
       command: 'python batch_ner_executor_de.py'
       # restart: always
       depends_on:
@@ -114,7 +128,7 @@ services:
     batch_lang_detector:
       build:
         context: ./workers
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile_en
       command: 'python batch_lang_detector.py'
       # restart: always
       depends_on:
@@ -130,8 +144,24 @@ services:
     batch_tokenizer_en:
       build:
         context: ./workers
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile_en
       command: 'python batch_tokenizer_en.py'
+      # restart: always
+      depends_on:
+        - redis
+      deploy:
+        mode: replicated
+        replicas: 1
+        resources:
+          limits:
+            memory: 2G
+      network_mode: "host"
+
+    embedder_en:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile_embedder
+      command: 'python embedder_en.py'
       # restart: always
       depends_on:
         - redis
