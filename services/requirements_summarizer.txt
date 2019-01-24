@@ -4,4 +4,4 @@ flask_cqlalchemy
 redis
 numpy
 scikit-learn
-networkx
+python-igraph

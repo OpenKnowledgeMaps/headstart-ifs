@@ -4,7 +4,7 @@ import json
 from flask import Blueprint, request, jsonify
 import redis
 import numpy as np
-import networkx as nx
+import igraph as ig
 from sklearn.metrics.pairwise import cosine_similarity
 
 redis_store = redis.StrictRedis(host="localhost", port=6379, db=0)
@@ -52,7 +52,7 @@ def summarize_doc():
                     candidate = rnc[1]
                     if candidate not in summary:
                         if len(candidate) < 35:
-                            summary.append(candidate)
+                            summary.append(candidate.replace(" - ", "-"))
                 response["summary"] = ", ".join(summary[:top_n])
                 response["success"] = True
             except Exception as e:
@@ -74,8 +74,13 @@ def get_ranking(tokens, embeddings):
     # summarise with textrank
     sim_mat = cosine_similarity(embeddings)
     np.fill_diagonal(sim_mat, 0)
-    nx_graph = nx.from_numpy_array(sim_mat)
-    scores = nx.pagerank(nx_graph, max_iter=300)
+    sources, targets = sim_mat.nonzero()
+    conn_indices = np.where(sim_mat)
+    weights = sim_mat[conn_indices]
+    edgelist = list(zip(sources.tolist(), targets.tolist()))
+    G = ig.Graph(edges=list(edgelist), directed=True)
+    G.es['weight'] = weights
+    scores = G.pagerank(weights="weight")
     ranking = sorted(((scores[i], nc)
                       for i, nc in enumerate(noun_chunks)), reverse=True)
     return ranking
