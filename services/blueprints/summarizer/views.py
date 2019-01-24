@@ -55,11 +55,16 @@ def summarize_doc():
             sim_mat = cosine_similarity(embeddings)
             np.fill_diagonal(sim_mat, 0)
             nx_graph = nx.from_numpy_array(sim_mat)
-            scores = nx.pagerank(nx_graph)
+            scores = nx.pagerank(nx_graph, max_iter=300)
             ranked_nc = sorted(((scores[i], nc)
                                 for i, nc in enumerate(noun_chunks)), reverse=True)
-            response["summary"] = ", ".join([rnc[1]
-                                            for rnc in ranked_nc[:top_n]])
+            summary = []
+            for rnc in ranked_nc:
+                candidate = rnc[1]
+                if candidate not in summary:
+                    if len(candidate) < 35:
+                        summary.append(candidate)
+            response["summary"] = ", ".join(summary[:top_n])
             response["success"] = True
         else:
             response["msg"] = "Method not implemented, choose one of ['noun_chunks']"
