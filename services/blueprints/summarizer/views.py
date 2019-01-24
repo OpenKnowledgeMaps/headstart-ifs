@@ -45,28 +45,37 @@ def summarize_doc():
                     redis_store.delete(k)
                     break
                 time.sleep(0.5)
-            res = [(x, np.array(y))
-                   for x, y in zip(noun_chunks, embeddings)
-                   if y is not None]
-            # average over noun chunk word vectors for each noun_chunk
-            noun_chunks = [r[0] for r in res]
-            embeddings = [r[1] for r in res]
-            # summarise with textrank
-            sim_mat = cosine_similarity(embeddings)
-            np.fill_diagonal(sim_mat, 0)
-            nx_graph = nx.from_numpy_array(sim_mat)
-            scores = nx.pagerank(nx_graph, max_iter=300)
-            ranked_nc = sorted(((scores[i], nc)
-                                for i, nc in enumerate(noun_chunks)), reverse=True)
-            summary = []
-            for rnc in ranked_nc:
-                candidate = rnc[1]
-                if candidate not in summary:
-                    if len(candidate) < 35:
-                        summary.append(candidate)
-            response["summary"] = ", ".join(summary[:top_n])
-            response["success"] = True
+            try:
+                ranked_nc = get_ranking(noun_chunks, embeddings)
+                summary = []
+                for rnc in ranked_nc:
+                    candidate = rnc[1]
+                    if candidate not in summary:
+                        if len(candidate) < 35:
+                            summary.append(candidate)
+                response["summary"] = ", ".join(summary[:top_n])
+                response["success"] = True
+            except Exception as e:
+                response["msg"] = str(e)
+                response["summary"] = None
         else:
             response["msg"] = "Method not implemented, choose one of ['noun_chunks']"
 
     return jsonify(response)
+
+
+def get_ranking(tokens, embeddings):
+    res = [(x, np.array(y))
+           for x, y in zip(tokens, embeddings)
+           if y is not None]
+    # average over noun chunk word vectors for each noun_chunk
+    noun_chunks = [r[0] for r in res]
+    embeddings = [r[1] for r in res]
+    # summarise with textrank
+    sim_mat = cosine_similarity(embeddings)
+    np.fill_diagonal(sim_mat, 0)
+    nx_graph = nx.from_numpy_array(sim_mat)
+    scores = nx.pagerank(nx_graph, max_iter=300)
+    ranking = sorted(((scores[i], nc)
+                      for i, nc in enumerate(noun_chunks)), reverse=True)
+    return ranking
