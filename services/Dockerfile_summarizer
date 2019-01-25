@@ -7,5 +7,6 @@ WORKDIR /app
 
 COPY requirements_summarizer.txt requirements.txt
 RUN pip install -r requirements.txt
+RUN python -m nltk.downloader stopwords
 
 COPY . .
