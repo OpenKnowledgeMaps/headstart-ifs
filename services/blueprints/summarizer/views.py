@@ -55,8 +55,10 @@ def summarize_clusters():
                     time.sleep(0.5)
                 ranked_tokens = get_textrank(doc, embeddings)
             except Exception as e:
-                print(e)
-                ranked_tokens = get_tfidf(cluster, stops)
+                try:
+                    ranked_tokens = get_tfidfrank(cluster, stops)
+                except Exception as e:
+                    ranked_tokens = [[0, ""]]
             summary = []
             for rnc in ranked_tokens:
                 candidate = rnc[1]
@@ -139,6 +141,7 @@ def get_textrank(tokens, embeddings):
 
 
 def get_tfidfrank(docs, stops):
+    """docs need to be converted from list of lists back to list of string"""
     docs = [" ".join([t.replace(" ", "_") for t in d])
             for d in docs]
     cv = CountVectorizer(max_df=0.85, lowercase=False, stop_words=stops)
