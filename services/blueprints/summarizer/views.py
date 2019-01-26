@@ -62,7 +62,7 @@ def summarize_clusters():
             summary = []
             for rnc in ranked_tokens:
                 candidate = rnc[1]
-                if candidate not in summary:
+                if candidate.lower() not in [s.lower() for s in summary]:
                     if len(candidate) < 35:
                         summary.append(candidate.replace(" - ", "-"))
             summaries.append(", ".join(summary[:top_n]))
@@ -102,7 +102,7 @@ def summarize_doc():
                 summary = []
                 for rnc in ranked_tokens:
                     candidate = rnc[1]
-                    if candidate not in summary:
+                    if candidate.lower() not in [s.lower() for s in summary]:
                         if len(candidate) < 35:
                             summary.append(candidate.replace(" - ", "-"))
                 response["summary"] = ", ".join(summary[:top_n])
