@@ -2,6 +2,7 @@ import time
 import json
 import spacy
 import redis
+from nltk.corpus import stopwords
 
 redis_store = redis.StrictRedis(host="localhost", port=6379, db=0)
 
@@ -10,25 +11,36 @@ class SpacyTagger(object):
 
     def __init__(self, lang, disable=[]):
         self.nlp = spacy.load(self.get_lang_resource(lang), disable=disable)
+        self.set_stopwords(lang)
 
     @staticmethod
-    def get_lang_resource(language):
+    def get_lang_resource(lang):
         valid_langs = {
             "en": "en_core_web_sm",
             "de": "de_core_news_sm"
         }
-        return valid_langs.get(language, 'en_core_web_sm')
+        return valid_langs.get(lang, 'en_core_web_sm')
+
+    def set_stopwords(self, lang):
+        if lang == 'en':
+            self.stops = stopwords.words('english')
+        if lang == 'de':
+            self.stops = stopwords.words('german')
+        else:
+            self.stops = []
 
     def get_nouns(self, doc):
-        return [str(t) for t in self.nlp(doc) if t.pos_ == 'NOUN']
+        return [t.text for t in self.nlp(doc) if t.pos_ == 'NOUN']
 
     def get_noun_chunks(self, doc):
-        return [" ".join([str(t) for t in nc if t.is_stop is False])
+        return [" ".join([t.text for t in nc if t.is_stop is False])
                 for nc in self.nlp(doc).noun_chunks if len(nc) > 0]
 
     def get_noun_chunks_batch(self, docs):
-        noun_chunks = [[" ".join([str(t) for t in nc if (t.is_stop is False
-                                                         and str(t) != "")])
+        noun_chunks = [[" ".join([t.text for t in nc if (
+                                        t.is_stop is False
+                                        and t.text != ""
+                                        and t.text.lower() not in self.stops)])
                         for nc in d.noun_chunks if len(nc) > 0]
                        for d in self.nlp.pipe(docs)]
         noun_chunks = [nc for nc in noun_chunks if nc != ""]
