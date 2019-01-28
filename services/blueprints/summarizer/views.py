@@ -30,9 +30,9 @@ def summarize_clusters():
         lang = r.get('lang')
         clustered_docs = json.loads(r.get('clustered_docs'))
         if lang == 'en':
-            stops = stopwords.word('english')
+            stops = stopwords.words('english')
         if lang == 'de':
-            stops = stopwords.word('german')
+            stops = stopwords.words('german')
         else:
             stops = []
 
