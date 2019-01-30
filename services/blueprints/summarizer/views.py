@@ -56,13 +56,11 @@ def summarize_clusters():
                     time.sleep(0.5)
                 textrank_scores = get_textrank(doc, embeddings)
             except Exception as e:
-                print(e)
                 textrank_scores = [[1, token] for token in doc]
             df1 = pd.DataFrame(textrank_scores, columns=['textrank', 'token'])
             try:
                 tfidf_scores = get_tfidfrank(cluster, stops)
             except Exception as e:
-                print(e)
                 tfidf_scores = [[1, token] for token in doc]
             df2 = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
             df = pd.merge(df1, df2, on='token')
@@ -76,12 +74,24 @@ def summarize_clusters():
 
 
 def get_summary(df, method, weights=(0.5, 0.5), top_n=3):
+    """
+    scores are rescaled to [0, 1]
+
+    if method is weighted, weights should be a tuple of floats that sum up to 1 (0.25, 0.75)
+    the rank of summary candidates is then calculated by weighting the
+    tfidf scores with the first value and textrank scores with the second
+    the final summary is then the top_n of weighted scores
+
+    if method it n+n, weights should be a tuple of integers (1, 2)
+    summary is then the top_n from tfidf scores (first tuple) plus
+    the top_n from textrank scores (second tuple)
+    """
     df["textrank"] = df.textrank - df.textrank.min()
     df["textrank"] = df.textrank / df.textrank.max()
     df["tfidf"] = df.tfidf - df.tfidf.min()
     df["tfidf"] = df.tfidf / df.tfidf.max()
-    df["weighted"] = df.apply(lambda x: x.textrank * weights[0] +
-                                        x.tfidf * weights[1], axis=1)
+    df["weighted"] = df.apply(lambda x: x.tfidf * weights[0] +
+                                        x.textrank * weights[1], axis=1)
     if method == 'weighted':
         summary = []
         for candidate in df.sort_values('weighted', ascending=False)['token']:
@@ -90,6 +100,21 @@ def get_summary(df, method, weights=(0.5, 0.5), top_n=3):
                     summary.append(candidate.replace(" - ", "-"))
         summary = ", ".join(summary[:top_n])
         return summary
+    if method == 'n+n':
+        tfidf_summary = []
+        for candidate in df.sort_values('tfidf', ascending=False)['token']:
+            if candidate.lower() not in [s.lower() for s in summary]:
+                if len(candidate) < 35:
+                    tfidf_summary.append(candidate.replace(" - ", "-"))
+        textrank_summary = []
+        for candidate in df.sort_values('textrank', ascending=False)['token']:
+            if candidate.lower() not in [s.lower() for s in summary]:
+                if len(candidate) < 35:
+                    textrank_summary.append(candidate.replace(" - ", "-"))
+        summary = ", ".join(tfidf_summary[:weights[0]] +
+                            textrank_summary[:weights[1]])
+        return summary
+
 
 
 def get_textrank(tokens, embeddings):
