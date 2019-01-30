@@ -6,6 +6,7 @@ from itertools import chain
 import redis
 import numpy as np
 import igraph as ig
+import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from nltk.corpus import stopwords
@@ -28,6 +29,7 @@ def summarize_clusters():
         r = request.get_json()
         top_n = r.get('top_n')
         lang = r.get('lang')
+        method = r.get('method')
         clustered_docs = json.loads(r.get('clustered_docs'))
         if lang == 'en':
             stops = stopwords.words('english')
@@ -40,8 +42,7 @@ def summarize_clusters():
         for cluster in clustered_docs:
             try:
                 # get nc embeddings
-                doc = list(chain.from_iterable(cluster))
-                doc = list(chain.from_iterable(doc))
+                doc = list(set(chain.from_iterable(cluster)))
                 k = str(uuid.uuid4())
                 d = {"id": k, "doc": doc}
                 redis_store.rpush("embed_noun_chunks", json.dumps(d))
@@ -53,69 +54,42 @@ def summarize_clusters():
                         redis_store.delete(k)
                         break
                     time.sleep(0.5)
-                ranked_tokens = get_textrank(doc, embeddings)
+                textrank_scores = get_textrank(doc, embeddings)
             except Exception as e:
-                try:
-                    ranked_tokens = get_tfidfrank(cluster, stops)
-                except Exception as e:
-                    ranked_tokens = [[0, ""]]
-            summary = []
-            for rnc in ranked_tokens:
-                candidate = rnc[1]
-                if candidate.lower() not in [s.lower() for s in summary]:
-                    if len(candidate) < 35:
-                        summary.append(candidate.replace(" - ", "-"))
-            summaries.append(", ".join(summary[:top_n]))
+                print(e)
+                textrank_scores = [[1, token] for token in doc]
+            df1 = pd.DataFrame(textrank_scores, columns=['textrank', 'token'])
+            try:
+                tfidf_scores = get_tfidfrank(cluster, stops)
+            except Exception as e:
+                print(e)
+                tfidf_scores = [[1, token] for token in doc]
+            df2 = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
+            df = pd.merge(df1, df2, on='token')
+
+            # implemented weighted and 2+1 methods here
+            summary = get_summary(df, method, weights=(0.5, 0.5), top_n=top_n)
+            summaries.append(summary)
         response["summaries"] = summaries
         response["success"] = True
     return jsonify(response)
 
 
-@app.route('/summarize', methods=['GET', 'POST'])
-def summarize_doc():
-    # doc
-    """
-    if method is textrank, doc should be a list of noun chunks
-    """
-    response = {"success": False}
-    if request.method == 'POST':
-        r = request.get_json()
-        method = r.get('method')
-        top_n = r.get('top_n')
-        doc = json.loads(r.get('doc'))
-
-        if method == 'textrank':
-            # get nc embeddings
-            k = str(uuid.uuid4())
-            d = {"id": k, "doc": doc}
-            redis_store.rpush("embed_noun_chunks", json.dumps(d))
-            while True:
-                result = redis_store.get(k)
-                if result is not None:
-                    result = json.loads(result.decode('utf-8'))
-                    embeddings = result.get('embeddings')
-                    redis_store.delete(k)
-                    break
-                time.sleep(0.5)
-            try:
-                ranked_tokens = get_textrank(doc, embeddings)
-                summary = []
-                for rnc in ranked_tokens:
-                    candidate = rnc[1]
-                    if candidate.lower() not in [s.lower() for s in summary]:
-                        if len(candidate) < 35:
-                            summary.append(candidate.replace(" - ", "-"))
-                response["summary"] = ", ".join(summary[:top_n])
-                response["success"] = True
-            except Exception as e:
-                response["msg"] = str(e)
-                response["summary"] = None
-        elif method == 'tfidf':
-            response["msg"] = "Method not implemented, choose one of ['textrank']"
-        else:
-            response["msg"] = "Method not implemented, choose one of ['textrank']"
-
-    return jsonify(response)
+def get_summary(df, method, weights=(0.5, 0.5), top_n=3):
+    df["textrank"] = df.textrank - df.textrank.min()
+    df["textrank"] = df.textrank / df.textrank.max()
+    df["tfidf"] = df.tfidf - df.tfidf.min()
+    df["tfidf"] = df.tfidf / df.tfidf.max()
+    df["weighted"] = df.apply(lambda x: x.textrank * weights[0] +
+                                        x.tfidf * weights[1], axis=1)
+    if method == 'weighted':
+        summary = []
+        for candidate in df.sort_values('weighted', ascending=False)['token']:
+            if candidate.lower() not in [s.lower() for s in summary]:
+                if len(candidate) < 35:
+                    summary.append(candidate.replace(" - ", "-"))
+        summary = ", ".join(summary[:top_n])
+        return summary
 
 
 def get_textrank(tokens, embeddings):
