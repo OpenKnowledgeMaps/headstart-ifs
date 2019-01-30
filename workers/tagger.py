@@ -33,14 +33,17 @@ class SpacyTagger(object):
         return [t.text for t in self.nlp(doc) if t.pos_ == 'NOUN']
 
     def get_noun_chunks(self, doc):
-        return [" ".join([t.text for t in nc if t.is_stop is False])
+        return [" ".join([t.text for t in nc if (
+                                        t.is_stop is False
+                                        and t.text != ""
+                                        and not t.text.lower() in self.stops)])
                 for nc in self.nlp(doc).noun_chunks if len(nc) > 0]
 
     def get_noun_chunks_batch(self, docs):
         noun_chunks = [[" ".join([t.text for t in nc if (
                                         t.is_stop is False
                                         and t.text != ""
-                                        and t.text.lower() not in self.stops)])
+                                        and not t.text.lower() in self.stops)])
                         for nc in d.noun_chunks if len(nc) > 0]
                        for d in self.nlp.pipe(docs)]
         noun_chunks = [nc for nc in noun_chunks if nc != ""]
