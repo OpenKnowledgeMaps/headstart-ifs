@@ -48,8 +48,6 @@ def summarize_clusters():
 
         summaries = []
         for cluster in clustered_docs:
-            if type(cluster[0]) != str:
-                cluster = [c[0] for c in cluster]
             try:
                 # get nc embeddings
                 doc = list(chain.from_iterable(cluster))
@@ -75,6 +73,7 @@ def summarize_clusters():
                 tfidf_scores = get_tfidfrank(cluster, stops)
             except Exception as e:
                 tfidf_scores = [[1, token] for token in doc]
+            print(tfidf_scores)
             df2 = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
             df = pd.merge(df1, df2, on='token')
 
