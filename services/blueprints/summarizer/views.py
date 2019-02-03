@@ -21,8 +21,16 @@ app = Blueprint('tagger', __name__)
 @app.route('/summarize_clusters', methods=['GET', 'POST'])
 def summarize_clusters():
     """
-    a list of clustered documents, where each document is a list of tokens
-    or noun chunks
+    list of list of lists of strings
+    [
+      [
+        [cluster1_doc1_token1, cluster1_doc1_token2],
+        [cluster1_doc2_token1, cluster1_doc2_token2],
+      ],
+        [cluster2_doc1_token1, cluster2_doc1_token2],
+        [cluster2_doc2_token1, cluster2_doc2_token2],
+      ]
+    ]
     """
     response = {"success": False}
     if request.method == 'POST':
@@ -31,6 +39,8 @@ def summarize_clusters():
         lang = r.get('lang')
         method = r.get('method')
         clustered_docs = json.loads(r.get('clustered_docs'))
+        if type(clustered_docs[0][0][0]) == list:
+            clustered_docs = clustered_docs[0]
         if lang == 'en':
             stops = stopwords.words('english')
         if lang == 'de':
@@ -114,7 +124,6 @@ def get_summary(df, method, weights=(0.5, 0.5), top_n=3):
         summary = ", ".join(tfidf_summary[:weights[0]] +
                             textrank_summary[:weights[1]])
         return summary
-
 
 
 def get_textrank(tokens, embeddings):
