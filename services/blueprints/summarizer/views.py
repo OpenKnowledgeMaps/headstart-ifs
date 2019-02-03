@@ -48,6 +48,8 @@ def summarize_clusters():
 
         summaries = []
         for cluster in clustered_docs:
+            if type(cluster[0]) != str:
+                cluster = [c[0] for c in cluster]
             try:
                 # get nc embeddings
                 doc = list(chain.from_iterable(cluster))
