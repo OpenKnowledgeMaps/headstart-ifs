@@ -39,8 +39,6 @@ def summarize_clusters():
         lang = r.get('lang')
         method = r.get('method')
         clustered_docs = json.loads(r.get('clustered_docs'))
-        if type(clustered_docs[0][0][0]) == list:
-            clustered_docs = clustered_docs[0]
         if lang == 'en':
             stops = stopwords.words('english')
         if lang == 'de':
@@ -52,7 +50,10 @@ def summarize_clusters():
         for cluster in clustered_docs:
             try:
                 # get nc embeddings
-                doc = list(set(chain.from_iterable(cluster)))
+                doc = list(chain.from_iterable(cluster))
+                if type(doc[0]) == list:
+                    doc = list(chain.from_iterable(doc))
+                doc = list(set(doc))
                 k = str(uuid.uuid4())
                 d = {"id": k, "doc": doc}
                 redis_store.rpush("embed_noun_chunks", json.dumps(d))
