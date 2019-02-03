@@ -150,8 +150,10 @@ def get_textrank(tokens, embeddings):
 
 
 def get_tfidfrank(docs, stops):
-    """docs need to be converted from list of lists back to list of string"""
-    docs = [" ".join([t.replace(" ", "_") for t in d])
+    """
+    needs to be a list of docs which are lists of strings
+    """
+    docs = [" ".join([t.replace(" ", "_") for t in chain.from_iterable(d)])
             for d in docs]
     cv = CountVectorizer(max_df=0.85, lowercase=False, stop_words=stops)
     word_count_vector = cv.fit_transform(docs)
