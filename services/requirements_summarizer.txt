@@ -6,3 +6,4 @@ numpy
 nltk
 scikit-learn
 python-igraph
+pandas
