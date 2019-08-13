@@ -1,6 +1,6 @@
 FROM python:3.6
 
-MAINTAINER Chris Kittel "web@christopherkittel.eu"
+MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
 
 # set working directory
 WORKDIR /app
