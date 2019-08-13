@@ -7,5 +7,5 @@ RUN R -e 'remotes::install_github("rstudio/renv")'
 
 WORKDIR /headstart
 COPY renv.lock ./
-RUN R -e 'renv::restore()'
+RUN R -e 'options(repos="https://cran.us.r-project.org"); renv::restore()'
 COPY other-scripts ./backend
