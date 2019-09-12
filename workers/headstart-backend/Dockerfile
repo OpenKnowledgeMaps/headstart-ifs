@@ -1,4 +1,4 @@
-FROM rocker/shiny:3.5.1
+FROM rocker/r-ver:3.5.1
 
 MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
 RUN apt-get update
