@@ -11,55 +11,21 @@ services:
       ports:
         - '6379:6379'
 
-    # cassandra:
-    #   image: 'cassandra:3.11.3'
-    #   restart: always
-    #   volumes:
-    #     - /var/lib/cassandra/data
-    #   ports:
-    #     - "9042:9042"
-
-    ifs:
-      build:
-        context: ./services
-        dockerfile: Dockerfile
-      command: >
-       /bin/bash -c "sleep 10; gunicorn -b 0.0.0.0:5001 'app:new_ifs_app()'"
+    cassandra:
+      image: 'cassandra:3.11.3'
       restart: always
+      volumes:
+        - db-data:/var/lib/cassandra/data
       ports:
-        - '5001:5001'
-      depends_on:
-        - redis
-        # - cassandra
-      network_mode: "host"
+        - "9042:9042"
 
-    tagger:
+    api:
       build:
-        context: ./services
-        dockerfile: Dockerfile
-      command: >
-       /bin/bash -c "sleep 10; gunicorn -b 0.0.0.0:5002 'app:new_tagging_app()'"
+        dockerfile: services.docker
       restart: always
       ports:
         - '5002:5002'
-      depends_on:
-        - redis
-        # - cassandra
-      network_mode: "host"
-
-    summarizer:
-      build:
-        context: ./services
-        dockerfile: Dockerfile_summarizer
-      command: >
-       /bin/bash -c "sleep 10; gunicorn -b 0.0.0.0:5003 'app:new_summarization_app()'"
-      restart: always
-      ports:
-        - '5003:5003'
-      depends_on:
-        - redis
-        # - cassandra
-      network_mode: "host"
+      network_mode: "host"      
 
     batch_pos_executor_en:
       build:
@@ -175,4 +141,5 @@ services:
 
 volumes:
   redis:
-  # cassandra:
+  db-data:
+    driver: local

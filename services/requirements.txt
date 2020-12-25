@@ -2,3 +2,4 @@ flask
 gunicorn
 flask_cqlalchemy
 redis
+flask_restx

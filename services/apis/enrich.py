@@ -2,20 +2,13 @@ import time
 import uuid
 import json
 from flask import Blueprint, redirect, request, jsonify
-import redis
+from flask_restx import Namespace, Resource, fields
 
 
-redis_store = redis.StrictRedis(host="localhost", port=6379, db=0)
-
-app = Blueprint('tagger', __name__)
+enrich_ns = Namespace("enrich", description="OKMAps item enrichment operations")
 
 
-@app.route('/')
-def main():
-    return "Hello World!"
-
-
-@app.route('/batch_lang_detect', methods=['GET', 'POST'])
+@enrich_ns.route('/batch_lang_detect')
 def batch_lang_detect():
     response = {"success": False}
     if request.method == 'POST':
@@ -41,7 +34,7 @@ def batch_lang_detect():
     return jsonify(response)
 
 
-@app.route('/tag', methods=['GET', 'POST'])
+@enrich_ns.route('/tag')
 def tag():
     response = {"success": False}
     if request.method == 'POST':
@@ -68,7 +61,7 @@ def tag():
     return jsonify(response)
 
 
-@app.route('/batch_pos', methods=['GET', 'POST'])
+@enrich_ns.route('/batch_pos')
 def batch_pos():
     response = {"success": False}
     if request.method == 'POST':
@@ -98,7 +91,7 @@ def batch_pos():
     return jsonify(response)
 
 
-@app.route('/batch_ner', methods=['GET', 'POST'])
+@enrich_ns.route('/batch_ner')
 def batch_ne():
     response = {"success": False}
     if request.method == 'POST':
@@ -128,7 +121,7 @@ def batch_ne():
     return jsonify(response)
 
 
-@app.route('/batch_tokenize', methods=['GET', 'POST'])
+@enrich_ns.route('/batch_tokenize')
 def batch_tokenize():
     response = {"success": False}
     if request.method == 'POST':
