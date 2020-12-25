@@ -2,18 +2,6 @@ version: '3.7'
 
 services:
 
-    backend:
-      build:
-        context: ./workers/headstart-backend
-        dockerfile: Dockerfile
-      restart: always
-      ports:
-        - '8019:8019'
-      volumes:
-        - type: bind
-          source: /renv/cache
-          target: /var/cache/renv/cache
-
     redis:
       image: 'redis:4.0-alpine'
       restart: always
