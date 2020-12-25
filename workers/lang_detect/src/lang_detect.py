@@ -1,7 +1,15 @@
+import sys
 import logging
 import time
+import json
+import spacy
 from spacy_cld import LanguageDetector
 
+
+formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+                              datefmt='%Y-%m-%d %H:%M:%S')
+
+                              
 class SpacyLangDetector(object):
 
     def __init__(self, redis_store, loglevel):

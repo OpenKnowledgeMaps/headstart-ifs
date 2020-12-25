@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import sys
+import json
 import logging
 import socket
 import tempfile
@@ -9,6 +11,9 @@ import numpy as np
 from LASER.source.lib.text_processing import Token, BPEfastApply
 from LASER.source.embed import *
 
+
+formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+                              datefmt='%Y-%m-%d %H:%M:%S')
 
 class LaserEmbedder(object):
 
@@ -24,10 +29,10 @@ class LaserEmbedder(object):
 
     def load_model(self):
         # encoder
-        model_dir = Path(__file__).parent / "LASER" / "models"
-        encoder_path = model_dir / "bilstm.93langs.2018-12-26.pt"
-        bpe_codes_path = model_dir / "93langs.fcodes"
-        self.logger.info(f' - Encoder: loading {encoder_path}')
+        model_dir = "/laser/LASER/models/"
+        encoder_path = os.path.join(model_dir, "bilstm.93langs.2018-12-26.pt")
+        bpe_codes_path = os.path.join(model_dir, "93langs.fcodes")
+        self.logger.info('Encoder: loading %s' % encoder_path)
         self.encoder = SentenceEncoder(encoder_path,
                                        max_sentences=None,
                                        max_tokens=12000,
@@ -89,7 +94,7 @@ class LaserEmbedder(object):
                 res = {}
                 res["id"] = k
                 res["doc"] = doc
-                res["embeddings"] = self.vectorize(doc)
+                res["embeddings"] = self.vectorize(doc, lang)
                 self.redis_store.set(k, json.dumps(res))
             except Exception as e:
                 self.logger.error(e)

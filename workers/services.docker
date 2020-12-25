@@ -1,16 +1,16 @@
-FROM python:3.6.10-slim
+FROM python:3.6.10
 
 MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
 
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends gcc
-RUN apt-get install -y --no-install-recommends git
+RUN apt-get upgrade -y
+RUN apt-get install -y --no-install-recommends gcc git linux-libc-dev libc6-dev
 
-WORKDIR /headstart
-COPY services/requirements.txt .
+WORKDIR /api
+COPY ./services/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install git+https://github.com/python-restx/flask-restx
-COPY services/src/ ./
-COPY redis_config.json .
+COPY ./services/src/ ./
+COPY ./redis_config.json .
 
-CMD gunicorn --workers 4 --threads 10 -b 127.0.0.1:5001 'app:app' --timeout 300
+CMD gunicorn --workers 4 --threads 10 -b 127.0.0.1:5002 'app:app' --timeout 300

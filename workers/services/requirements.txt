@@ -1,5 +1,7 @@
 flask
+flask_restx
+flask_cors
 gunicorn
 flask_cqlalchemy
 redis
-flask_restx
+pyyaml

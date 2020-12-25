@@ -1,4 +1,4 @@
-FROM python:3.6.10-slim
+FROM python:3.6.10
 
 MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
 
@@ -11,13 +11,12 @@ ENV LANG=C.UTF-8
 # set working directory
 WORKDIR /workers
 
-COPY lang_detect/requirements.txt ./
+COPY ./lang_detect/requirements.txt ./
 RUN pip install -r requirements.txt
 
 RUN python -m spacy download en_core_web_sm
-RUN python -m nltk.downloader stopwords
 
-COPY lang_detect/ ./lang_detect
+COPY ./lang_detect/ ./lang_detect
 COPY *.py ./
-COPY redis_config.json .
+COPY ./redis_config.json .
 ENTRYPOINT python run_lang_detect.py

@@ -1,9 +1,9 @@
-FROM python:3.6.10-slim
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 
 MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
 
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends gcc git
+RUN apt-get install -y --no-install-recommends gcc git \
         g++ \
         wget \
         curl \
@@ -13,33 +13,41 @@ RUN apt-get install -y --no-install-recommends gcc git
         sudo \
         vim
 
+RUN apt-get update \
+  && apt-get install -y python3-pip python3-dev \
+  && cd /usr/local/bin \
+  && ln -s /usr/bin/python3 python \
+  && pip3 install --upgrade pip
+
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
-WORKDIR /headstart
+WORKDIR /laser
 
-COPY laser/requirements.txt /app/requirements.txt
-RUN pip install --trusted-host pypi.python.org -r requirements.txt --verbose
+COPY ./laser/requirements.txt .
+RUN pip install -r requirements.txt
 
 
 # Download LASER from FB
 RUN git clone https://github.com/facebookresearch/LASER.git
 
-ENV LASER /app/LASER
+ENV LASER /laser/LASER
 WORKDIR $LASER
 
 RUN bash ./install_models.sh
 
 #Installing FAISS
-RUN conda install --name env -c pytorch faiss-cpu -y
+RUN pip install torch faiss-cpu faiss-gpu
 RUN bash ./install_external_tools.sh
-COPY ./decode.py $LASER/tasks/embed/decode.py
 
 RUN echo "Hello World" > test.txt
 RUN $LASER/tasks/embed/embed.sh test.txt en test_embed.raw
-RUN python $LASER/tasks/embed/decode.py test_embed.raw
+RUN python $LASER/docker/decode.py test_embed.raw
 
-
+WORKDIR /laser
+RUN mkdir -p LASER
+RUN touch LASER/source/__init__.py
+RUN touch LASER/source/lib/__init__.py
 COPY laser/ ./laser
 COPY *.py ./
 COPY redis_config.json .

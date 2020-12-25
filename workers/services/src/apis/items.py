@@ -1,10 +1,16 @@
 import uuid
 import time
 import json
-from flask import Blueprint, redirect, jsonify, request
+from flask import Blueprint, redirect, jsonify, request, make_response
 from flask_restx import Namespace, Resource, fields
 from models import Documents
+import redis
 
+
+with open("redis_config.json") as infile:
+    redis_config = json.load(infile)
+
+redis_store = redis.StrictRedis(**redis_config)
 
 items_ns = Namespace("items", description="OKMAps item store operations")
 
@@ -65,7 +71,7 @@ class NounChunks(Resource):
 
 
 @items_ns.route('/entities/<index>/<doc_id>')
-class Entities(Resources):
+class Entities(Resource):
 
     def get(self, index, doc_id):
         try:
