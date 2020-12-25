@@ -2,15 +2,6 @@ version: '3.7'
 
 services:
 
-    redis:
-      image: 'redis:4.0-alpine'
-      restart: always
-      command: redis-server
-      volumes:
-         - 'redis:/var/lib/redis/data'
-      ports:
-        - '6379:6379'
-
     cassandra:
       image: 'cassandra:3.11.3'
       restart: always
@@ -21,123 +12,24 @@ services:
 
     api:
       build:
+        context: workers
         dockerfile: services.docker
       restart: always
       ports:
         - '5002:5002'
-      network_mode: "host"      
-
-    batch_pos_executor_en:
-      build:
-        context: ./workers
-        dockerfile: Dockerfile_en
-      command: 'python run_tagger.py --type POS --lang en --batch'
-      # restart: always
-      depends_on:
-        - redis
-      deploy:
-        mode: replicated
-        replicas: 1
-        resources:
-          limits:
-            memory: 2G
       network_mode: "host"
 
-    batch_ner_executor_en:
+    lang_detect:
       build:
-        context: ./workers
-        dockerfile: Dockerfile_en
-      command: 'python run_tagger.py --type NER --lang en --batch'
-      # restart: always
-      depends_on:
-        - redis
-      deploy:
-        mode: replicated
-        replicas: 1
-        resources:
-          limits:
-            memory: 2G
-      network_mode: "host"
+        context: workers
+        dockerfile: lang_detect.docker
+      restart: always
 
-    batch_pos_executor_de:
+    laser:
       build:
-        context: ./workers
-        dockerfile: Dockerfile_de
-      command: 'python run_tagger.py --type POS --lang de --batch'
-      # restart: always
-      depends_on:
-        - redis
-      deploy:
-        mode: replicated
-        replicas: 1
-        resources:
-          limits:
-            memory: 2G
-      network_mode: "host"
-
-    batch_ner_executor_de:
-      build:
-        context: ./workers
-        dockerfile: Dockerfile_de
-      command: 'python run_tagger.py --type NER --lang de --batch'
-      # restart: always
-      depends_on:
-        - redis
-      deploy:
-        mode: replicated
-        replicas: 1
-        resources:
-          limits:
-            memory: 2G
-      network_mode: "host"
-
-    batch_lang_detector:
-      build:
-        context: ./workers
-        dockerfile: Dockerfile_en
-      command: 'python batch_lang_detector.py'
-      # restart: always
-      depends_on:
-        - redis
-      deploy:
-        mode: replicated
-        replicas: 1
-        resources:
-          limits:
-            memory: 2G
-      network_mode: "host"
-
-    batch_tokenizer_en:
-      build:
-        context: ./workers
-        dockerfile: Dockerfile_en
-      command: 'python run_tagger.py --type TOKEN --lang en --batch'
-      # restart: always
-      depends_on:
-        - redis
-      deploy:
-        mode: replicated
-        replicas: 1
-        resources:
-          limits:
-            memory: 2G
-      network_mode: "host"
-
-    embedder_en:
-      build:
-        context: ./workers
-        dockerfile: Dockerfile_embedder
-      command: 'python embedder_en.py'
-      # restart: always
-      depends_on:
-        - redis
-      deploy:
-        mode: replicated
-        replicas: 1
-        resources:
-          limits:
-            memory: 2G
-      network_mode: "host"
+        context: workers
+        dockerfile: laser.docker
+      restart: always
 
 volumes:
   redis:

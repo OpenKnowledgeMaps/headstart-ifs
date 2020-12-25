@@ -1,0 +1,23 @@
+FROM python:3.6.10-slim
+
+MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
+
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends gcc git
+
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+# set working directory
+WORKDIR /workers
+
+COPY lang_detect/requirements.txt ./
+RUN pip install -r requirements.txt
+
+RUN python -m spacy download en_core_web_sm
+RUN python -m nltk.downloader stopwords
+
+COPY lang_detect/ ./lang_detect
+COPY *.py ./
+COPY redis_config.json .
+ENTRYPOINT python run_lang_detect.py

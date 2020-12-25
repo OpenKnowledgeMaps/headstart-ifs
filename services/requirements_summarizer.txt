@@ -1,9 +1,0 @@
-flask
-gunicorn
-flask_cqlalchemy
-redis
-numpy
-nltk
-scikit-learn
-python-igraph
-pandas

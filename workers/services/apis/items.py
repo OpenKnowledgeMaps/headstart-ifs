@@ -26,6 +26,7 @@ class NounChunks(Resource):
                 nc = doc.noun_chunks
             result["noun_chunks"] = nc
             result["success"] = True
+            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  200,
                                  headers)
@@ -51,6 +52,7 @@ class NounChunks(Resource):
             update = {'noun_chunks': nc}
             doc.update(**update)
             result["success"] = True
+            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  200,
                                  headers)
@@ -78,6 +80,7 @@ class Entities(Resources):
                 ne = doc.entities
             result["entities"] = ne
             result["success"] = True
+            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  200,
                                  headers)
@@ -102,6 +105,7 @@ class Entities(Resources):
             update = {'entities': ne}
             doc.update(**update)
             result["success"] = True
+            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  200,
                                  headers)
@@ -128,6 +132,7 @@ class Hypernyms(Resource):
                                 .hypernyms)
             result["hypernyms"] = hypernyms
             result["success"] = True
+            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  200,
                                  headers)
@@ -169,6 +174,7 @@ class TagNouns(Resource):
             update = {"nouns": nouns}
             doc.update(**update)
             result["success"] = True
+            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  200,
                                  headers)
@@ -212,6 +218,7 @@ class CreateHypernyms(Resource):
             update = {"hypernyms": hypernyms}
             doc.update(**update)
             result["success"] = True
+            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  200,
                                  headers)
