@@ -5,3 +5,6 @@ gunicorn
 flask_cqlalchemy
 redis
 pyyaml
+numpy
+msgpack
+msgpack_numpy

@@ -4,16 +4,19 @@ import os
 import sys
 import json
 import logging
-import socket
+import struct
 import tempfile
 from pathlib import Path
 import numpy as np
+import msgpack
+import msgpack_numpy as mnp
 from LASER.source.lib.text_processing import Token, BPEfastApply
 from LASER.source.embed import *
 
 
 formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
                               datefmt='%Y-%m-%d %H:%M:%S')
+mnp.patch()
 
 class LaserEmbedder(object):
 
@@ -50,7 +53,7 @@ class LaserEmbedder(object):
 
 
     def vectorize(self, doc, lang):
-        embedding = ''
+        embeddings = ''
         if lang is None or not lang:
             lang = "en"
         with tempfile.TemporaryDirectory() as tmp:
@@ -85,17 +88,13 @@ class LaserEmbedder(object):
             dim = 1024
             X = np.fromfile(str(bpe_oname), dtype=np.float32, count=-1)
             X.resize(X.shape[0] // dim, dim)
-            embedding = X.tolist()
-        return embedding
+        return X
 
     def run(self):
         while True:
             k, doc, lang = self.next_item()
             try:
-                res = {}
-                res["id"] = k
-                res["doc"] = doc
-                res["embeddings"] = self.vectorize(doc, lang)
-                self.redis_store.set(k, json.dumps(res))
+                embeddings = self.vectorize(doc, lang)
+                self.redis_store.set(k, mnp.packb(embeddings))
             except Exception as e:
                 self.logger.error(e)

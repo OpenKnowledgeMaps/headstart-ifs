@@ -1,10 +1,16 @@
 import time
 import uuid
 import json
+import struct
+import numpy as np
+import msgpack
+import msgpack_numpy as mnp
 from flask import Blueprint, redirect, request, jsonify, make_response
 from flask_restx import Namespace, Resource, fields
 import redis
 
+
+mnp.patch()
 
 with open("redis_config.json") as infile:
     redis_config = json.load(infile)
@@ -88,13 +94,11 @@ def sent_embed(doc, lang):
     d = {"id": k, "doc": doc, "lang": lang}
     redis_store.rpush("laser", json.dumps(d))
     while True:
-        result = redis_store.get(k)
-        if result is not None:
-            result = json.loads(result.decode('utf-8'))
-            embeddings = result.get('embeddings')
+        embeddings = redis_store.get(k)
+        if embeddings is not None:
             redis_store.delete(k)
             break
-        time.sleep(0.5)
+        time.sleep(0.1)
     return embeddings
 
 
@@ -106,10 +110,9 @@ class SentEmbed(Resource):
             r = request.get_json()
             doc = r.get('doc')
             lang = r.get('lang')
-            result["embeddings"] = sent_embed(doc, lang)
-            result["success"] = True
-            headers = {'ContentType': 'application/json'}
-            return make_response(jsonify(result),
+            embeddings = sent_embed(doc, lang)
+            headers = {'ContentType': 'application/x-msgpack'}
+            return make_response(embeddings,
                                     200,
                                     headers)
         except Exception as e:
