@@ -104,7 +104,7 @@ class SentEmbed(Resource):
         try:
             result = {"success": False}
             r = request.get_json()
-            doc = r.get('lang')
+            doc = r.get('doc')
             lang = r.get('lang')
             result["embeddings"] = sent_embed(doc, lang)
             result["success"] = True

@@ -17,7 +17,7 @@ formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
 
 class LaserEmbedder(object):
 
-    def __init__(self, redis_store, loglevel):
+    def __init__(self, redis_store, loglevel, model_dir):
         self.redis_store = redis_store
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(loglevel)
@@ -25,19 +25,20 @@ class LaserEmbedder(object):
         handler.setFormatter(formatter)
         handler.setLevel(loglevel)
         self.logger.addHandler(handler)
+        self.model_dir = model_dir
         self.load_model()
 
     def load_model(self):
         # encoder
-        model_dir = "/laser/LASER/models/"
-        encoder_path = os.path.join(model_dir, "bilstm.93langs.2018-12-26.pt")
-        bpe_codes_path = os.path.join(model_dir, "93langs.fcodes")
+        encoder_path = os.path.join(self.model_dir, "bilstm.93langs.2018-12-26.pt")
+        self.bpe_codes_path = os.path.join(self.model_dir, "93langs.fcodes")
         self.logger.info('Encoder: loading %s' % encoder_path)
         self.encoder = SentenceEncoder(encoder_path,
                                        max_sentences=None,
                                        max_tokens=12000,
                                        sort_kind='mergesort',
-                                       cpu=True)
+                                       cpu=False)
+        self.logger.info("Using CUDA: %s" % str(self.encoder.use_cuda))
 
     def next_item(self):
         queue, msg = self.redis_store.blpop("laser")
@@ -54,13 +55,13 @@ class LaserEmbedder(object):
             lang = "en"
         with tempfile.TemporaryDirectory() as tmp:
             tmpdir = Path(tmp)
-            ifname = tmpdir / "content.txt"
-            bpe_fname = tmpdir / 'bpe'
-            bpe_oname = tmpdir / 'out.raw'
-            with ifname.open("w") as f:
+            ifname = os.path.join(tmpdir, "content.txt")
+            bpe_fname = os.path.join(tmpdir, 'bpe')
+            bpe_oname = os.path.join(tmpdir, 'out.raw')
+            with open(ifname, "w") as f:
                 f.write(doc)
             if lang != '--':
-                tok_fname = tmpdir / "tok"
+                tok_fname = os.path.join(tmpdir, "tok")
                 Token(str(ifname),
                     str(tok_fname),
                     lang=lang,
@@ -72,7 +73,7 @@ class LaserEmbedder(object):
                 ifname = tok_fname
             BPEfastApply(str(ifname),
                         str(bpe_fname),
-                        str(bpe_codes_path),
+                        str(self.bpe_codes_path),
                         verbose=True, over_write=False)
             ifname = bpe_fname
             EncodeFile(self.encoder,

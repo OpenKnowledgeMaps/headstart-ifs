@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:10.1-cudnn8-devel-ubuntu18.04
 
 MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
 
@@ -37,7 +37,9 @@ WORKDIR $LASER
 RUN bash ./install_models.sh
 
 #Installing FAISS
-RUN pip install torch faiss-cpu faiss-gpu
+#RUN pip install --no-cache-dir torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install torch==1.7.1 torchvision==0.8.2
+RUN pip install faiss-cpu faiss-gpu
 RUN bash ./install_external_tools.sh
 
 RUN echo "Hello World" > test.txt

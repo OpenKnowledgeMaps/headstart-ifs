@@ -10,5 +10,6 @@ if __name__ == '__main__':
 
     redis_store = redis.StrictRedis(**redis_config)
     le = LaserEmbedder(redis_store=redis_store,
-                       loglevel=os.environ.get("LASER_LOGLEVEL", "INFO"))
+                       loglevel=os.environ.get("LASER_LOGLEVEL", "INFO"),
+                       model_dir="/laser/LASER/models")
     le.run()
