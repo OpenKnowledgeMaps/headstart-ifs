@@ -3,7 +3,6 @@ import logging
 import time
 import json
 import spacy
-from spacy.pipeline import Sentencizer
 
 formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
                               datefmt='%Y-%m-%d %H:%M:%S')
@@ -32,16 +31,19 @@ class SpacySentencizer(object):
         handler.setFormatter(formatter)
         handler.setLevel(loglevel)
         self.logger.addHandler(handler)
+        self.load_models()
 
     def load_models(self):
         self.pipes = {}
         for cl, source in core_models.items():
+            self.logger.debug("Loading model: %s" % cl)
             self.pipes[cl] = spacy.load("%s_core_%s_sm" % (cl, source),
                                         disable=["ner", "entity_linker",
                                                  "textcat", "entity_ruler",
                                                  "merge_noun_chunks",
                                                  "merge_entities",
                                                  "merge_subtokens"])
+        self.logger.debug("Models loaded")
 
     def next_item(self):
         queue, msg = self.redis_store.blpop("sent_tokenize")
@@ -52,12 +54,18 @@ class SpacySentencizer(object):
         return k, docs, lang
 
     def sent_tokenize(self, docs, lang):
+        assert isinstance(docs, list)
+        self.logger.debug(docs)
+        for d in docs:
+            assert isinstance(d, str), "assert failed: isinstance(doc, str)"
         if lang in core_models:
             nlp = self.pipes.get(lang)
         else:
             nlp = self.pipes.get("en")
         tokenized_docs = [d for d in nlp.pipe(docs, batch_size=100, n_threads=5)]
+        self.logger.debug(tokenized_docs)
         sents = [[s.text for s in d.sents] for d in tokenized_docs]
+        self.logger.debug(sents)
         return sents
 
     def run(self):
@@ -66,7 +74,7 @@ class SpacySentencizer(object):
             try:
                 res = {}
                 res["id"] = k
-                res["sents"] = self.sent_tokenize(docs)
+                res["sents"] = self.sent_tokenize(docs, lang)
                 self.redis_store.set(k, json.dumps(res))
             except Exception as e:
                 self.logger.error(e)

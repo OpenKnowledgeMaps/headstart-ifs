@@ -31,6 +31,8 @@ class LaserEmbedder(object):
         self.model_dir = model_dir
         self.load_model()
 
+    
+
     def load_model(self):
         # encoder
         encoder_path = os.path.join(self.model_dir, "bilstm.93langs.2018-12-26.pt")

@@ -39,6 +39,7 @@ class SpacyLangDetector(object):
     def run(self):
         while True:
             k, docs = self.next_item()
+            self.logger.debug(docs)
             try:
                 res = {}
                 res["id"] = k

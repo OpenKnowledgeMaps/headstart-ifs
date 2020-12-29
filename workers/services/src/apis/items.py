@@ -3,7 +3,7 @@ import time
 import json
 from flask import Blueprint, redirect, jsonify, request, make_response
 from flask_restx import Namespace, Resource, fields
-from models import Documents
+from models import Item as Documents
 import redis
 
 

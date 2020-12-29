@@ -1,19 +1,23 @@
-from cassandra.cqlengine import columns
-from cassandra.cqlengine.models import Model
+from elasticsearch_dsl import Document, Binary, Date, Keyword, Integer, Text, DenseVector
 
 
-class Documents(Model):
+class Item(Document):
     __keyspace__ = 'documents'
 
-    id = columns.UUID(primary_key=True)
-    doi = columns.Text(index=True)
-    base = columns.Text(index=True)
-    core = columns.Text(index=True)
-    pubmed = columns.Text(index=True)
-    lang = columns.List(columns.Text)
-    nouns = columns.List(columns.Text)
-    noun_chunks = columns.List(columns.Text)
-    entities = columns.List(columns.Text)
-    topics = columns.List(columns.Text)
-    hypernyms = columns.List(columns.Text)
-    meshterms = columns.List(columns.Text)
+    faiss_id = Integer()
+    title = Text() 
+    lang = Keyword()
+    url = Keyword()
+    publication_date = Date()
+    # categories = List(Text)
+    description = Text()
+    fulltext = Text()
+    embeddings_doc = DenseVector(dims=1024)
+    embeddings_quants = DenseVector(dims=1024)
+    embeddings_sents = DenseVector(dims=1024)
+    # nouns = List(Text)
+    # noun_chunks = List(Text)
+    # entities = List(Text)
+    # topics = List(Text)
+    # hypernyms = List(Text)
+    # meshterms = List(Text)

@@ -30,7 +30,7 @@ RUN python -m spacy download pt_core_news_sm
 RUN python -m spacy download ro_core_news_sm
 RUN python -m spacy download es_core_news_sm
 
-COPY ./lang_detect/ ./lang_detect
+COPY ./nlp/ ./nlp
 COPY *.py ./
 COPY ./redis_config.json .
-ENTRYPOINT python run_lang_detect.py
+ENTRYPOINT python run_nlp.py

@@ -43,6 +43,7 @@ def lang_detect(docs, batch=False):
 @enrich_ns.route('/lang_detect')
 class LangDetect(Resource):
     def post(self):
+        enrich_ns.logger.debug("lang_detect")
         try:
             result = {"success": False}
             r = request.get_json()
@@ -58,6 +59,7 @@ class LangDetect(Resource):
                                  200,
                                  headers)
         except Exception as e:
+            enrich_ns.logger.error(e)
             result = {'success': False, 'reason': e}
             headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
@@ -67,6 +69,7 @@ class LangDetect(Resource):
 @enrich_ns.route('/lang_detect/batch')
 class LangDetectBatch(Resource):
     def post(self):
+        enrich_ns.logger.debug("lang_detect/batch")
         try:
             result = {"success": False}
             r = request.get_json()
@@ -82,11 +85,51 @@ class LangDetectBatch(Resource):
                                  200,
                                  headers)
         except Exception as e:
+            enrich_ns.logger.error(e)
             result = {'success': False, 'reason': e}
             headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  500,
                                  headers)
+
+
+def sent_tokenize(docs, lang):
+    k = str(uuid.uuid4())
+    d = {"id": k, "docs": docs, "lang": lang}
+    redis_store.rpush("sent_tokenize", json.dumps(d))
+    while True:
+        result = redis_store.get(k)
+        if result is not None:
+            result = json.loads(result.decode('utf-8'))
+            sents = result.get('sents')
+            redis_store.delete(k)
+            break
+        time.sleep(0.5)
+    return sents
+
+
+@enrich_ns.route('/sent_tokenize')
+class SentTokenize(Resource):
+    def post(self):
+        enrich_ns.logger.debug("sent_tokenize")
+        try:
+            result = {"success": False}
+            r = request.get_json()
+            docs = r.get('docs')
+            lang = r.get('lang')
+            result["sents"] = sent_tokenize(docs, lang)
+            headers = {'ContentType': 'application/json'}
+            return make_response(jsonify(result),
+                                    200,
+                                    headers)
+        except Exception as e:
+            enrich_ns.logger.error(e)
+            result = {'success': False, 'reason': e}
+            headers = {'ContentType': 'application/json'}
+            return make_response(jsonify(result),
+                                    500,
+                                    headers)
+
 
 
 def sent_embed(doc, lang):
@@ -105,6 +148,7 @@ def sent_embed(doc, lang):
 @enrich_ns.route('/sent_embed')
 class SentEmbed(Resource):
     def post(self):
+        enrich_ns.logger.debug("sent_embed")
         try:
             result = {"success": False}
             r = request.get_json()
@@ -116,11 +160,13 @@ class SentEmbed(Resource):
                                     200,
                                     headers)
         except Exception as e:
+            enrich_ns.logger.error(e)
             result = {'success': False, 'reason': e}
             headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                     500,
                                     headers)
+
 
 # @enrich_ns.route('/tag')
 # def tag():

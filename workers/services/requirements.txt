@@ -2,7 +2,8 @@ flask
 flask_restx
 flask_cors
 gunicorn
-flask_cqlalchemy
+elasticsearch
+elasticsearch_dsl
 redis
 pyyaml
 numpy

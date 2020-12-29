@@ -8,7 +8,7 @@ import logging
 
 from apis.enrich import enrich_ns
 from apis.items import items_ns
-from database import db
+# from database import db
 
 from config import settings
 from utils.monkeypatches import ReverseProxied
@@ -32,7 +32,7 @@ app = Flask('v1', instance_relative_config=True)
 app.config.from_object('config.settings')
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(app.logger.level)
-db.init_app(app)
+# db.init_app(app)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_port=1, x_for=1, x_host=1, x_prefix=1)
 app.wsgi_app = ReverseProxied(app.wsgi_app)
 CORS(app, expose_headers=["Content-Disposition", "Access-Control-Allow-Origin"])

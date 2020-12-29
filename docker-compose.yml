@@ -2,14 +2,6 @@ version: '2.3'
 
 services:
 
-    cassandra:
-      image: 'cassandra:3.11.3'
-      restart: always
-      volumes:
-        - db-data:/var/lib/cassandra/data
-      ports:
-        - "9042:9042"
-
     api:
       build:
         context: workers
@@ -23,6 +15,13 @@ services:
       build:
         context: workers
         dockerfile: lang_detect.docker
+      restart: always
+      network_mode: "host"
+
+    nlp:
+      build:
+        context: workers
+        dockerfile: nlp.docker
       restart: always
       network_mode: "host"
 
