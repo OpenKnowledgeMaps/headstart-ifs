@@ -25,16 +25,16 @@ services:
       restart: always
       network_mode: "host"
 
-    laser:
-      build:
-        context: workers
-        dockerfile: laser.docker
-      restart: always
-      network_mode: "host"
-      runtime: nvidia
-      environment:
-        - NVIDIA_VISIBLE_DEVICES=all
-        - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    # laser:
+    #   build:
+    #     context: workers
+    #     dockerfile: laser.docker
+    #   restart: always
+    #   network_mode: "host"
+    #   runtime: nvidia
+    #   environment:
+    #     - NVIDIA_VISIBLE_DEVICES=all
+    #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
     gusem:
       build:
@@ -46,6 +46,8 @@ services:
       environment:
         - NVIDIA_VISIBLE_DEVICES=all
         - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      volumes:
+        - /home/chris/models:/models
 
 volumes:
   redis:

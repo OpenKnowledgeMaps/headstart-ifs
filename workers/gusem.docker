@@ -1,0 +1,16 @@
+FROM tensorflow/tensorflow:latest-gpu
+
+MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
+
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+WORKDIR /gusem
+
+COPY ./gusem/requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY gusem/ ./gusem
+COPY *.py ./
+COPY redis_config.json .
+ENTRYPOINT python run_gusem.py

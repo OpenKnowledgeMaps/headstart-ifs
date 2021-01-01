@@ -32,7 +32,7 @@ formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
 lang_detect_url = "http://localhost/ifs/enrich/lang_detect"
 batch_lang_detect_url = "http://localhost/ifs/enrich/lang_detect/batch"
 sentenize_url = "http://localhost/ifs/enrich/sent_tokenize"
-embed_url = "http://localhost/ifs/enrich/sent_embed"
+embed_url = "http://localhost/ifs/enrich/sent_embed/gusem"
 
 connections.configure(
     default={'hosts': '127.0.0.1:9200'},
@@ -235,8 +235,7 @@ def enrich(text):
     payload["lang"] = lang
     sents = requests.post(sentenize_url, json=payload).json()["sents"]
     payload = {}
-    payload["doc"] = "\n".join(sents[0])
-    payload["lang"] = lang
+    payload["sents"] = sents
     embeddings = mnp.unpackb(requests.post(embed_url, json=payload).content)
     return lang, embeddings
 
@@ -260,8 +259,7 @@ def prepare_batch(batch):
             lang_batches[lang][i]["sents"] = s
         n_sents = [len(s) for s in sents]
         payload = {}
-        payload["doc"] = "\n".join(["\n".join(b.get('sents', [])) for b in lang_batch]) 
-        payload["lang"] = lang
+        payload["sents"] = list(chain.from_iterable(sents))
         embeddings = mnp.unpackb(requests.post(embed_url, json=payload).content)
         splits = np.cumsum(n_sents)[:-1]
         embeddings = np.split(embeddings, splits)
@@ -298,7 +296,7 @@ def main(batch_size=100, tabular_rasa=False):
     print(n_total)
     if tabular_rasa:
         esi.clean_setup_index()
-        ib.init_index(1024)
+        ib.init_index(512)
         next_faiss_id = 0
     else:
         q = Q("exists", field="faiss_id")
@@ -349,4 +347,4 @@ def main(batch_size=100, tabular_rasa=False):
     ib.write_index(index_path)
 
 if __name__ == '__main__':
-    main(500, True)
+    main(50, True)
