@@ -1,0 +1,33 @@
+FROM pytorch/pytorch:1.7.0-cuda11.0-cudnn8-runtime
+
+MAINTAINER Chris Kittel "christopher.kittel@openknowledgemaps.org"
+
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends gcc git \
+        g++ \
+        wget \
+        curl \
+        git \
+        make \
+        unzip \
+        sudo \
+        vim
+
+RUN apt-get update \
+  && apt-get install -y python3-pip python3-dev \
+  && cd /usr/local/bin \
+  && ln -s /usr/bin/python3 python \
+  && pip3 install --upgrade pip
+
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+WORKDIR /search
+
+COPY ./search/requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY search/ ./search
+COPY *.py ./
+COPY redis_config.json .
+ENTRYPOINT python run_search.py

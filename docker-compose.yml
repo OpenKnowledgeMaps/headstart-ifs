@@ -36,6 +36,17 @@ services:
         - NVIDIA_VISIBLE_DEVICES=all
         - NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
+    gusem:
+      build:
+        context: workers
+        dockerfile: gusem.docker
+      restart: always
+      network_mode: "host"
+      runtime: nvidia
+      environment:
+        - NVIDIA_VISIBLE_DEVICES=all
+        - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
 volumes:
   redis:
   db-data:

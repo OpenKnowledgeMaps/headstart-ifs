@@ -1,0 +1,6 @@
+redis
+numpy
+msgpack
+msgpack_numpy
+tensorflow_hub
+tensorflow_text
