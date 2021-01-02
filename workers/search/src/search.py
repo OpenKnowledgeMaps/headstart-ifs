@@ -45,9 +45,27 @@ class VectorSearch(object):
         embedded_query = embeddings.mean(0)
         return embedded_query
 
-    def search(self, query, n_results):
+    def search_exact(self, query, n_results):
         embedded_query = self.embed_query(query)
-        knn_query = {
+        body = {
+            "query": {
+                "elastiknn_nearest_neighbors": {
+                    "field": "knn_vec",
+                    "vec": embedded_query.tolist(),
+                    "model": "exact",
+                    "similarity": "angular"
+                }
+            }
+        }
+        result = self.es.search(
+                    index=self.settings.ES_INDEX,
+                    body=body,
+                    size=n_results)
+        return result["hits"]["hits"]
+
+    def search_ann(self, query, n_results):
+        embedded_query = self.embed_query(query)
+        body = {
             "query": {
                 "elastiknn_nearest_neighbors": {
                     "field": "knn_vec",
@@ -62,9 +80,61 @@ class VectorSearch(object):
         }
         result = self.es.search(
                     index=self.settings.ES_INDEX,
-                    body={
-                        "size": n_results,
-                        "query": knn_query
+                    body=body,
+                    size=n_results)
+        return result["hits"]["hits"]
+
+    def search_index(self, query, n_results):
+        embedded_query = self.embed_query(query)
+        body = {
+            "query": {
+                "elastiknn_nearest_neighbors": {
+                    "field": "knn_vec",
+                    "vec": {
+                        "values": embedded_query.tolist()
+                    },
+                    "model": "lsh",
+                    "similarity": "angular",
+                    "candidates": n_results
+                }
+            }
+        }
+        result = self.es.search(
+                    index=self.settings.ES_INDEX,
+                    body=body,
+                    size=n_results)
+        return result["hits"]["hits"]
+
+    def search_combined(self, query, n_results):
+        embedded_query = self.embed_query(query)
+        body = {
+            "query": {
+                "function_score": {
+                    "query": {
+                        "multi_match": {
+                            "query": query,
+                            "fields": ["title", "description", "fulltext"]
                         }
-                    )
+                    },
+                    "boost_mode": "replace",
+                    "functions": [
+                        {
+                            "elastiknn_nearest_neighbors": {
+                                "field": "knn_vec",
+                                "vec": {
+                                    "values": embedded_query.tolist()
+                                },
+                                "model": "lsh",
+                                "similarity": "angular",
+                                "candidates": n_results
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        result = self.es.search(
+                    index=self.settings.ES_INDEX,
+                    body=body,
+                    size=n_results)
         return result["hits"]["hits"]

@@ -22,7 +22,7 @@ from elasticsearch_dsl import Search, Q, connections, Index
 from models import Item
 
 from tqdm import tqdm
-from config import settings
+from .config import settings
 
 
 formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
