@@ -21,7 +21,6 @@ from elasticsearch.helpers import scan, bulk
 from elasticsearch_dsl import Search, Q, connections, Index
 from models import Item
 
-import faiss
 from tqdm import tqdm
 from config import settings
 
@@ -85,9 +84,6 @@ class FaissIndexer(object):
         index = faiss.IndexIDMap(index)
         self.index = index
 
-    def load_index(self, index_path):
-        self.index = faiss.read_index(index_path)
-
     def prepare_content(self):
         q = Q("exists", field="faiss_id") & Q("exists", field="embeddings_doc")
         s = Search(using=self.es, index=self.settings.ES_INDEX).query(q)
@@ -148,10 +144,27 @@ class ESIndexBuilder(object):
         self.index = Index(self.settings.ES_INDEX)
         self.index.settings(
             number_of_shards=1,
-            number_of_replicas=0
+            number_of_replicas=0,
+            elastiknn=True
         )
         self.index.delete(ignore=404)
         self.index.create()
+        Item.init(index=self.settings.ES_INDEX, using=self.es)
+        new_mapping = {
+            "properties": {
+                "knn_vec": {
+                    "type": "elastiknn_dense_float_vector", # 1
+                    "elastiknn": {
+                        "dims": 512,                        # 2
+                        "model": "lsh",                     # 3
+                        "similarity": "angular",            # 4
+                        "L": 99,                            # 5
+                        "k": 1                              # 6
+                    }
+                }
+            }
+        }
+        self.es.indices.put_mapping(new_mapping, index=self.settings.ES_INDEX)
 
     def add_mongo_source(self, settings):
         self.client = pymongo.MongoClient(host=settings.MONGODB_SERVER,
@@ -264,52 +277,30 @@ def prepare_batch(batch):
         splits = np.cumsum(n_sents)[:-1]
         embeddings = np.split(embeddings, splits)
         for i, emb in enumerate(embeddings):
-            lang_batches[lang][i]["embeddings_sents"] =  emb
             lang_batches[lang][i]["embeddings_doc"] =  emb.mean(0).tolist()
     return list(chain.from_iterable(lang_batches.values()))
 
 
-def docs_producer(batch, target):
-    if target == "es":
-        for b in batch:
-            d = {k:v for k,v in b.items() if not k in ["sents", "embeddings_sents"]}
-            d = Item(**d)
-            yield d.to_dict(include_meta=True)
-    if target == "faiss":
-        for b in batch:
-            yield b.get('faiss_id'), b.get('embeddings_sents')
+def docs_producer(batch):
+    for b in batch:
+        d = {k:v for k,v in b.items() if not k in ["sents", "embeddings_sents"]}
+        d = Item(**d)
+        yield d.to_dict(include_meta=True)
 
 
-def ingest_batch(esi, ib, batch):
+def ingest_batch(esi, batch):
     batch = prepare_batch(batch)
     bulk(esi.es, docs_producer(batch, "es"), index=esi.settings.ES_INDEX)
-    ib.bulk_index(docs_producer(batch, "faiss"))
-
 
 def main(batch_size=100, tabular_rasa=False):
-    ib = FaissIndexer(settings)
-    index_path = "/home/chris/data/FAISS/%s.index" % settings.ES_INDEX
-
     esi = ESIndexBuilder(settings)
     esi.add_mongo_source(settings)
     n_total = esi.mongo_collection.count()
     print(n_total)
     if tabular_rasa:
         esi.clean_setup_index()
-        ib.init_index(512)
-        next_faiss_id = 0
-    else:
-        q = Q("exists", field="faiss_id")
-        s = Search(using=esi.es, index=esi.settings.ES_INDEX).query(q).sort('-faiss_id')
-        try:
-            next_faiss_id = s.execute().hits.hits[0]["_source"]["faiss_id"] + 1
-        except IndexError:
-            next_faiss_id = 0
 
-    try:
-        Item.init(index=esi.settings.ES_INDEX, using=esi.es)
-    except Exception as e:
-        print(e)
+
     q = Q("exists", field="url")
     s = Search(using=esi.es, index=settings.ES_INDEX).query(q)
     existing_urls = set((r.url for r in s.scan()))
@@ -320,15 +311,13 @@ def main(batch_size=100, tabular_rasa=False):
                 doc = preprocess(doc)
                 if not tabular_rasa and doc["url"] in existing_urls:
                     continue
-                doc["faiss_id"] = next_faiss_id
-                next_faiss_id += 1
                 batch.append(doc)
             except Exception as e:
                 print(e)
 
             if len(batch) >= batch_size:
                 try:
-                    ingest_batch(esi, ib, batch)
+                    ingest_batch(esi, batch)
                     batch = []
                 except Exception as e:
                     print(e)
@@ -336,15 +325,11 @@ def main(batch_size=100, tabular_rasa=False):
     # process incomplete batch
     if len(batch) > 0:
         try:
-            ingest_batch(esi, ib, batch)
+            ingest_batch(esi, batch)
         except Exception as e:
             print(e)
 
     print(esi.es.count())
-
-    #esi.add_missing_embeddings(batch_size)
-    #esi.add_missing_faiss_ids()
-    ib.write_index(index_path)
 
 if __name__ == '__main__':
     main(50, True)

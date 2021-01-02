@@ -2,57 +2,104 @@ version: '2.3'
 
 services:
 
-    api:
-      build:
-        context: workers
-        dockerfile: services.docker
-      restart: always
-      ports:
-        - '5002:5002'
-      network_mode: "host"
+  es01:
+    build:
+      context: workers
+      dockerfile: es.docker
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=es01,es02
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.max_local_storage_nodes=2
+    restart: always
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - /home/chris/data/elasticsearch/data:/usr/share/elasticsearch/data
+    ports:
+      - 127.0.0.1:9200:9200
 
-    lang_detect:
-      build:
-        context: workers
-        dockerfile: lang_detect.docker
-      restart: always
-      network_mode: "host"
+  es02:
+    build:
+      context: workers
+      dockerfile: es.docker
+    container_name: es02
+    environment:
+      - node.name=es02
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01,es02
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.max_local_storage_nodes=2
+    restart: always
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - /home/chris/data/elasticsearch/data:/usr/share/elasticsearch/data
 
-    nlp:
-      build:
-        context: workers
-        dockerfile: nlp.docker
-      restart: always
-      network_mode: "host"
+  api:
+    build:
+      context: workers
+      dockerfile: services.docker
+    restart: always
+    ports:
+      - '5002:5002'
+    network_mode: "host"
 
-    # laser:
-    #   build:
-    #     context: workers
-    #     dockerfile: laser.docker
-    #   restart: always
-    #   network_mode: "host"
-    #   runtime: nvidia
-    #   environment:
-    #     - NVIDIA_VISIBLE_DEVICES=all
-    #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  lang_detect:
+    build:
+      context: workers
+      dockerfile: lang_detect.docker
+    restart: always
+    network_mode: "host"
 
-    gusem:
-      build:
-        context: workers
-        dockerfile: gusem.docker
-      restart: always
-      network_mode: "host"
-      runtime: nvidia
-      environment:
-        - NVIDIA_VISIBLE_DEVICES=all
-        - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      volumes:
-        - /home/chris/models:/models
+  nlp:
+    build:
+      context: workers
+      dockerfile: nlp.docker
+    restart: always
+    network_mode: "host"
+
+  # laser:
+  #   build:
+  #     context: workers
+  #     dockerfile: laser.docker
+  #   restart: always
+  #   network_mode: "host"
+  #   runtime: nvidia
+  #   environment:
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+  gusem:
+    build:
+      context: workers
+      dockerfile: gusem.docker
+    restart: always
+    network_mode: "host"
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - /home/chris/models:/models
 
 volumes:
   redis:
-  db-data:
+  data01:
     driver: local
+  data02:
+    driver: local
+
 
 networks:
   default:

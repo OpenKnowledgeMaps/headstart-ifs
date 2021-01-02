@@ -19,7 +19,7 @@ batch_lang_detect_url = "http://localhost/ifs/enrich/lang_detect/batch"
 sentenize_url = "http://localhost/ifs/enrich/sent_tokenize"
 embed_url = "http://localhost/ifs/enrich/sent_embed/gusem"
 
-class FSearch(object):
+class VectorSearch(object):
 
     def __init__(self, redis_store, settings, loglevel):
         self.settings = settings
@@ -31,10 +31,6 @@ class FSearch(object):
         handler.setLevel(loglevel)
         self.logger.addHandler(handler)
         self.es = Elasticsearch(["127.0.0.1:9200"], timeout=60)
-        self.load_index("/home/chris/data/FAISS/econ.index")
-
-    def load_index(self, path):
-        self.index = faiss.read_index(path)
 
     def embed_query(self, query):
         payload = {}
@@ -53,7 +49,8 @@ class FSearch(object):
     def find_nearest(self, embedded_query, n_results):
         D, I = self.index.search(np.array([embedded_query]), k=n_results)
         result_ids = I.tolist()[0]
-        return result_ids
+        distance = D.tolist()[0]
+        return result_ids, distance
 
     def retrieve_results(self, result_ids, n_results):
         s = Search(using=self.es, index=self.settings.ES_INDEX)
@@ -67,3 +64,23 @@ class FSearch(object):
         most_relevant = [i[0] for i in Counter(nn).most_common(n_results)]
         result_docs = self.retrieve_results(most_relevant, n_results)
         return result_docs
+
+    def search_elastic(self, query, n_results):
+        embedded_query = self.embed_query(query)
+        script_query = {
+            "script_score": {
+                "query": {"match_all": {}},
+                "script": {
+                    "source": "cosineSimilarity(params.query_vector, doc['embeddings_doc']) + 1.0",
+                    "params": {"query_vector": embedded_query.tolist()}
+                    }
+                }
+            }
+        result = self.es.search(
+                    index=self.settings.ES_INDEX,
+                    body={
+                        "size": n_results,
+                        "query": script_query
+                        }
+                    )
+        return result["hits"]["hits"]
