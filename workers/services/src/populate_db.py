@@ -67,59 +67,6 @@ def sanity_check(doc):
     return check
 
 
-class FaissIndexer(object):
-    
-    def __init__(self, settings, loglevel='INFO'):
-        self.settings = settings
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(loglevel)
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(formatter)
-        handler.setLevel(loglevel)
-        self.logger.addHandler(handler)
-        self.es = Elasticsearch()
-
-    def init_index(self, dims):
-        index = faiss.IndexFlatL2(dims)
-        index = faiss.IndexIDMap(index)
-        self.index = index
-
-    def prepare_content(self):
-        q = Q("exists", field="faiss_id") & Q("exists", field="embeddings_doc")
-        s = Search(using=self.es, index=self.settings.ES_INDEX).query(q)
-        res = s.scan()
-        content = [(r["faiss_id"],
-                   r["embeddings_doc"])
-                  for r in res]
-        # exclude indexed IDs
-        return content
-    
-    def update_index(self):
-        content = self.prepare_content()
-        embeddings = np.vstack([r[1] for r in content]).astype(np.float32)
-        ids = np.array([r[0] for r in content]).astype(np.int64)
-        self.add_to_index(embeddings, ids)
-
-    def add_to_index(self, embeddings, ids):
-        embeddings = embeddings.astype(np.float32)
-        ids = ids.astype(np.int64)
-        self.index.add_with_ids(embeddings, ids)
-    
-    def bulk_index(self, producer):
-        docs = list(producer)
-        temp_ids = [d[0] for d in docs]
-        embeddings_sents = [d[1] for d in docs]    
-        faiss_ids = []
-        for i, emb in enumerate(embeddings_sents):
-            faiss_ids.extend([temp_ids[i]] * emb.shape[0])
-        embeddings = np.vstack(embeddings_sents).astype(np.float32)
-        ids = np.array(faiss_ids).astype(np.int64)
-        self.index.add_with_ids(embeddings, ids)
-
-    def write_index(self, file):
-        faiss.write_index(self.index, file)
-
-
 def sanitize_text(text):
     if text.isprintable():
         return text
@@ -153,13 +100,13 @@ class ESIndexBuilder(object):
         new_mapping = {
             "properties": {
                 "knn_vec": {
-                    "type": "elastiknn_dense_float_vector", # 1
+                    "type": "elastiknn_dense_float_vector",
                     "elastiknn": {
-                        "dims": 512,                        # 2
-                        "model": "lsh",                     # 3
-                        "similarity": "angular",            # 4
-                        "L": 99,                            # 5
-                        "k": 1                              # 6
+                        "dims": 512,
+                        "model": "lsh",
+                        "similarity": "angular",
+                        "L": 10,
+                        "k": 10
                     }
                 }
             }
@@ -220,23 +167,6 @@ class ESIndexBuilder(object):
                 print(batch)
                 batch = []
 
-    def add_missing_faiss_ids(self):
-        q = Q("exists", field="faiss_id")
-        s = Search(using=self.es, index=self.settings.ES_INDEX).query(q).sort('-faiss_id')
-        try:
-            next_faiss_id = s.execute().hits.hits[0]["_source"]["faiss_id"] + 1
-        except IndexError:
-            next_faiss_id = 0
-        q = ~Q("exists", field="faiss_id")
-        s = Search(using=self.es, index=self.settings.ES_INDEX).query(q)
-        n_missing = len(list(s.scan()))
-        print("Missing faiss_ids: %d" %n_missing)
-        res = s.scan()
-        for r in tqdm(res, total=n_missing):
-            update = {"faiss_id": next_faiss_id}
-            doc = Item.get(r.meta.id, self.es, self.settings.ES_INDEX)
-            doc.update(using=self.es, index=self.settings.ES_INDEX, **update)
-            next_faiss_id += 1
 
 def enrich(text):
     payload = {}
@@ -278,6 +208,7 @@ def prepare_batch(batch):
         embeddings = np.split(embeddings, splits)
         for i, emb in enumerate(embeddings):
             lang_batches[lang][i]["embeddings_doc"] =  emb.mean(0).tolist()
+            lang_batches[lang][i]["knn_vec"] =  emb.mean(0).tolist()
     return list(chain.from_iterable(lang_batches.values()))
 
 
@@ -290,7 +221,7 @@ def docs_producer(batch):
 
 def ingest_batch(esi, batch):
     batch = prepare_batch(batch)
-    bulk(esi.es, docs_producer(batch, "es"), index=esi.settings.ES_INDEX)
+    bulk(esi.es, docs_producer(batch), index=esi.settings.ES_INDEX)
 
 def main(batch_size=100, tabular_rasa=False):
     esi = ESIndexBuilder(settings)

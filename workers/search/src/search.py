@@ -1,7 +1,6 @@
 import sys
 import logging
 import numpy as np
-import faiss
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from elasticsearch_dsl import Search, Q
@@ -46,41 +45,26 @@ class VectorSearch(object):
         embedded_query = embeddings.mean(0)
         return embedded_query
 
-    def find_nearest(self, embedded_query, n_results):
-        D, I = self.index.search(np.array([embedded_query]), k=n_results)
-        result_ids = I.tolist()[0]
-        distance = D.tolist()[0]
-        return result_ids, distance
-
-    def retrieve_results(self, result_ids, n_results):
-        s = Search(using=self.es, index=self.settings.ES_INDEX)
-        s = s.filter('terms', faiss_id=result_ids)[:n_results]
-        result_docs = s.execute()
-        return result_docs
-
     def search(self, query, n_results):
         embedded_query = self.embed_query(query)
-        nn = self.find_nearest(embedded_query, n_results*2)
-        most_relevant = [i[0] for i in Counter(nn).most_common(n_results)]
-        result_docs = self.retrieve_results(most_relevant, n_results)
-        return result_docs
-
-    def search_elastic(self, query, n_results):
-        embedded_query = self.embed_query(query)
-        script_query = {
-            "script_score": {
-                "query": {"match_all": {}},
-                "script": {
-                    "source": "cosineSimilarity(params.query_vector, doc['embeddings_doc']) + 1.0",
-                    "params": {"query_vector": embedded_query.tolist()}
-                    }
+        knn_query = {
+            "query": {
+                "elastiknn_nearest_neighbors": {
+                    "field": "knn_vec",
+                    "vec": {
+                        "values": embedded_query.tolist()
+                    },
+                    "model": "lsh",
+                    "similarity": "angular",
+                    "candidates": n_results
                 }
             }
+        }
         result = self.es.search(
                     index=self.settings.ES_INDEX,
                     body={
                         "size": n_results,
-                        "query": script_query
+                        "query": knn_query
                         }
                     )
         return result["hits"]["hits"]

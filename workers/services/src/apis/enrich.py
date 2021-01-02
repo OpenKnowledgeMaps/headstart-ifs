@@ -131,42 +131,6 @@ class SentTokenize(Resource):
                                     headers)
 
 
-
-def sent_embed_laser(doc, lang):
-    k = str(uuid.uuid4())
-    d = {"id": k, "doc": doc, "lang": lang}
-    redis_store.rpush("laser", json.dumps(d))
-    while True:
-        embeddings = redis_store.get(k)
-        if embeddings is not None:
-            redis_store.delete(k)
-            break
-        time.sleep(0.1)
-    return embeddings
-
-@enrich_ns.route('/sent_embed/laser')
-class SentEmbed(Resource):
-    def post(self):
-        enrich_ns.logger.debug("sent_embed/laser")
-        try:
-            result = {"success": False}
-            r = request.get_json()
-            doc = r.get('doc')
-            lang = r.get('lang')
-            embeddings = sent_embed_laser(doc, lang)
-            headers = {'ContentType': 'application/x-msgpack'}
-            return make_response(embeddings,
-                                    200,
-                                    headers)
-        except Exception as e:
-            enrich_ns.logger.error(e)
-            result = {'success': False, 'reason': e}
-            headers = {'ContentType': 'application/json'}
-            return make_response(jsonify(result),
-                                    500,
-                                    headers)
-
-
 def sent_embed_gusem(sents):
     k = str(uuid.uuid4())
     d = {"id": k, "sents": sents}

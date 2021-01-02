@@ -2,9 +2,8 @@ from elasticsearch_dsl import Document, Binary, Date, Keyword, Integer, Text, De
 
 
 class Item(Document):
-    __keyspace__ = 'documents'
+    __keyspace__ = 'items'
 
-    faiss_id = Integer()
     title = Text() 
     lang = Keyword()
     url = Keyword()
@@ -13,8 +12,6 @@ class Item(Document):
     description = Text()
     fulltext = Text()
     embeddings_doc = DenseVector(dims=512)
-    embeddings_quants = DenseVector(dims=512)
-    embeddings_sents = DenseVector(dims=512)
     # nouns = List(Text)
     # noun_chunks = List(Text)
     # entities = List(Text)

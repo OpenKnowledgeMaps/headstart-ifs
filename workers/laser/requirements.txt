@@ -1,7 +1,0 @@
-scipy
-numpy
-Cython
-transliterate
-redis
-msgpack
-msgpack_numpy
