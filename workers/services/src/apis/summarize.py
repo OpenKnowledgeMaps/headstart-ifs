@@ -26,6 +26,60 @@ embed_url = "http://localhost/ifs/enrich/sent_embed/gusem"
 summarization_ns = Namespace("summarize", description="OKMAps summarization operations")
 
 
+@summarization_ns.route('/extract_keywords')
+class ExtractKeywords(Resource):
+    def post(self):
+        """
+        list of list of lists of strings
+        [
+        [
+            [cluster1_doc1_token1, cluster1_doc1_token2],
+            [cluster1_doc2_token1, cluster1_doc2_token2],
+        ],
+            [cluster2_doc1_token1, cluster2_doc1_token2],
+            [cluster2_doc2_token1, cluster2_doc2_token2],
+        ]
+        ]
+        """
+        result = {"success": False}
+        headers = {'ContentType': 'application/json'}
+        try:
+            r = request.get_json()
+            top_n = r.get('top_n')
+            lang = r.get('lang')
+            clustered_docs = r.get('clustered_docs')
+            if lang == 'en':
+                stops = stopwords.words('english')
+            if lang == 'de':
+                stops = stopwords.words('german')
+            else:
+                stops = []
+
+            tfidf_ranks = get_tfidfranks(clustered_docs, stops)
+            summaries = []
+            for tfidf_scores in tfidf_ranks:
+                df = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
+                df["textrank"] = 0
+
+                # implemented weighted and 2+1 methods here
+                try:
+                    summary = get_summary(df, "weighted", weights=(1, 0), top_n=top_n)
+                except Exception as e:
+                    summarization_ns.logger.error(e)
+                    summary = ""
+                summaries.append(summary)
+            result["summaries"] = summaries
+            result["success"] = True
+            return make_response(jsonify(result),
+                                 200,
+                                 headers)
+        except Exception as e:
+            summarization_ns.logger.error(e)
+            result = {'success': False, 'reason': e}
+            return make_response(jsonify(result),
+                                 500,
+                                 headers)
+
 @summarization_ns.route('/clusters')
 class SummarizeClusters(Resource):
     def post(self):
