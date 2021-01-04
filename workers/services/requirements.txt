@@ -13,3 +13,4 @@ python-igraph
 nltk
 scikit-learn
 pandas
+requests

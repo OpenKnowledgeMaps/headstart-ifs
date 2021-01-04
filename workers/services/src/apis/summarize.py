@@ -42,12 +42,13 @@ class SummarizeClusters(Resource):
         ]
         """
         result = {"success": False}
+        headers = {'ContentType': 'application/json'}
         try:
             r = request.get_json()
             top_n = r.get('top_n')
             lang = r.get('lang')
-            method = r.get('method')
-            clustered_docs = json.loads(r.get('clustered_docs'))
+            method = r.get('method', "weighted")
+            clustered_docs = r.get('clustered_docs')
             if lang == 'en':
                 stops = stopwords.words('english')
             if lang == 'de':
@@ -58,7 +59,7 @@ class SummarizeClusters(Resource):
             try:
                 tfidf_ranks = get_tfidfranks(clustered_docs, stops)
             except Exception as e:
-                print(e)
+                summarization_ns.logger.error(e)
             summaries = []
             for cluster, tfidf_scores in zip(clustered_docs, tfidf_ranks):
                 try:
@@ -69,7 +70,7 @@ class SummarizeClusters(Resource):
                     embeddings = mnp.unpackb(requests.post(embed_url, json=payload).content)
                     textrank_scores = get_textrank(cluster, embeddings)
                 except Exception as e:
-                    print(e)
+                    summarization_ns.logger.error(e)
                     textrank_scores = [[1, token] for token in cluster]
                 df1 = pd.DataFrame(textrank_scores, columns=['textrank', 'token'])
                 df2 = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
@@ -79,15 +80,17 @@ class SummarizeClusters(Resource):
                 try:
                     summary = get_summary(df, method, weights=(0.5, 0.5), top_n=top_n)
                 except Exception as e:
-                    print(e)
+                    summarization_ns.logger.error(e)
                     summary = ""
                 summaries.append(summary)
             result["summaries"] = summaries
             result["success"] = True
+            return make_response(jsonify(result),
+                                 200,
+                                 headers)
         except Exception as e:
             summarization_ns.logger.error(e)
             result = {'success': False, 'reason': e}
-            headers = {'ContentType': 'application/json'}
             return make_response(jsonify(result),
                                  500,
                                  headers)
