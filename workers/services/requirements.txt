@@ -9,3 +9,7 @@ pyyaml
 numpy
 msgpack
 msgpack_numpy
+python-igraph
+nltk
+scikit-learn
+pandas

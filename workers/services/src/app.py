@@ -8,6 +8,7 @@ import logging
 
 from apis.enrich import enrich_ns
 from apis.items import items_ns
+from apis.summarize import summarization_ns
 # from database import db
 
 from config import settings
@@ -40,6 +41,7 @@ CORS(app, expose_headers=["Content-Disposition", "Access-Control-Allow-Origin"])
 api = api_patches(app, settings)
 api.add_namespace(enrich_ns, path='/enrich')
 api.add_namespace(items_ns, path='/items')
+api.add_namespace(summarization_ns, path='/summarize')
 app.logger.debug(app.config)
 app.logger.debug(app.url_map)
 

@@ -10,6 +10,7 @@ WORKDIR /api
 COPY ./services/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install git+https://github.com/python-restx/flask-restx
+RUN python -m nltk.downloader stopwords
 COPY ./services/src/ ./
 COPY ./redis_config.json .
 

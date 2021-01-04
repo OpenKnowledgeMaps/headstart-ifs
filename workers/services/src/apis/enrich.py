@@ -5,7 +5,7 @@ import struct
 import numpy as np
 import msgpack
 import msgpack_numpy as mnp
-from flask import Blueprint, redirect, request, jsonify, make_response
+from flask import request, jsonify, make_response
 from flask_restx import Namespace, Resource, fields
 import redis
 
@@ -20,7 +20,7 @@ redis_store = redis.StrictRedis(**redis_config)
 enrich_ns = Namespace("enrich", description="OKMAps item enrichment operations")
 
 
-def lang_detect(docs, batch=False):
+def lang_detect(docs, batch=True):
     if not batch:
         docs = [docs]
     k = str(uuid.uuid4())
@@ -95,8 +95,8 @@ class LangDetectBatch(Resource):
 
 def sent_tokenize(docs, lang):
     k = str(uuid.uuid4())
-    d = {"id": k, "docs": docs, "lang": lang}
-    redis_store.rpush("sent_tokenize", json.dumps(d))
+    d = {"id": k, "docs": docs, "lang": lang, "tasks": ["sent_tokenize"]}
+    redis_store.rpush("nlp", json.dumps(d))
     while True:
         result = redis_store.get(k)
         if result is not None:
@@ -165,6 +165,105 @@ class SentEmbed(Resource):
                                     500,
                                     headers)
 
+def ner(docs, lang, batch=True):
+    if not batch:
+        docs = [docs]
+    k = str(uuid.uuid4())
+    d = {"id": k, "docs": docs, "lang": lang, "tasks": ["ner"]}
+    redis_store.rpush("nlp", json.dumps(d))
+    while True:
+        result = redis_store.get(k)
+        if result is not None:
+            result = json.loads(result.decode('utf-8'))
+            ne = result.get('ne')
+            redis_store.delete(k)
+            break
+        time.sleep(0.5)
+    if not batch:
+        return ne[0]
+    else:
+        return ne
+
+@enrich_ns.route('/ner/batch')
+class NERBatch(Resource):
+    def post(self):
+        enrich_ns.logger.debug("ner/batch")
+        headers = {'ContentType': 'application/json'}
+        try:
+            result = {"success": False}
+            r = request.get_json()
+            docs = r.get('docs')
+            lang = r.get('lang')
+            if lang is None:
+                result["msg"] = "No language provided, add <lang> to request"
+                return make_response(jsonify(result),
+                                     400,
+                                     headers)
+            if len(docs) is 0:
+                result["msg"] = "No documents provided"
+                return make_response(jsonify(result),
+                                     400,
+                                     headers)
+            result["ne"] = ner(docs, lang)
+            return make_response(jsonify(result),
+                                 200,
+                                 headers)
+        except Exception as e:
+            enrich_ns.logger.error(e)
+            result = {'success': False, 'reason': e}
+            return make_response(jsonify(result),
+                                 500,
+                                 headers)
+
+def noun_chunks(docs, lang, batch=True):
+    if not batch:
+        docs = [docs]
+    k = str(uuid.uuid4())
+    d = {"id": k, "docs": docs, "lang": lang, "tasks": ["noun_chunks"]}
+    redis_store.rpush("nlp", json.dumps(d))
+    while True:
+        result = redis_store.get(k)
+        if result is not None:
+            result = json.loads(result.decode('utf-8'))
+            ne = result.get('noun_chunks')
+            redis_store.delete(k)
+            break
+        time.sleep(0.5)
+    if not batch:
+        return ne[0]
+    else:
+        return ne
+
+@enrich_ns.route('/noun_chunks/batch')
+class NCBatch(Resource):
+    def post(self):
+        enrich_ns.logger.debug("noun_chunks/batch")
+        headers = {'ContentType': 'application/json'}
+        try:
+            result = {"success": False}
+            r = request.get_json()
+            docs = r.get('docs')
+            lang = r.get('lang')
+            if lang is None:
+                result["msg"] = "No language provided, add <lang> to request"
+                return make_response(jsonify(result),
+                                     400,
+                                     headers)
+            if len(docs) is 0:
+                result["msg"] = "No documents provided"
+                return make_response(jsonify(result),
+                                     400,
+                                     headers)
+            result["noun_chunks"] = noun_chunks(docs, lang)
+            return make_response(jsonify(result),
+                                 200,
+                                 headers)
+        except Exception as e:
+            enrich_ns.logger.error(e)
+            result = {'success': False, 'reason': e}
+            return make_response(jsonify(result),
+                                 500,
+                                 headers)
 # @enrich_ns.route('/tag')
 # def tag():
 #     response = {"success": False}
@@ -222,34 +321,6 @@ class SentEmbed(Resource):
 #     return jsonify(response)
 
 
-# @enrich_ns.route('/batch_ner')
-# def batch_ne():
-#     response = {"success": False}
-#     if request.method == 'POST':
-#         r = request.get_json()
-#         lang = r.get('lang')
-#         docs = r.get('docs', [])
-#         if lang is None:
-#             response["msg"] = "No language provided, add <lang> to request"
-#             return jsonify(response)
-#         if len(docs) is 0:
-#             response["msg"] = "No documents provided"
-#             return jsonify(response)
-
-#         k = str(uuid.uuid4())
-#         d = {"id": k, "docs": docs}
-#         redis_store.rpush("batch_ner_"+lang, json.dumps(d))
-#         while True:
-#             result = redis_store.get(k)
-#             if result is not None:
-#                 result = json.loads(result.decode('utf-8'))
-#                 entities = result.get('entities')
-#                 response["entities"] = entities
-#                 redis_store.delete(k)
-#                 break
-#             time.sleep(0.5)
-#         response["success"] = True
-#     return jsonify(response)
 
 
 # @enrich_ns.route('/batch_tokenize')

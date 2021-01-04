@@ -20,7 +20,7 @@ embed_url = "http://localhost/ifs/enrich/sent_embed/gusem"
 
 class VectorSearch(object):
 
-    def __init__(self, redis_store, settings, loglevel):
+    def __init__(self, settings, redis_store, loglevel):
         self.settings = settings
         self.redis_store = redis_store
         self.logger = logging.getLogger(__name__)
@@ -137,4 +137,4 @@ class VectorSearch(object):
                     index=self.settings.ES_INDEX,
                     body=body,
                     size=n_results)
-        return result["hits"]["hits"]
+        return result
