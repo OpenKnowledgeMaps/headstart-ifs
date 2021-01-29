@@ -63,7 +63,7 @@ class ExtractKeywords(Resource):
 
                 # implemented weighted and 2+1 methods here
                 try:
-                    summary = get_summary(df, "weighted", weights=(1, 0), top_n=top_n)
+                    summary = get_document_summary(df, "weighted", weights=(1, 0), top_n=top_n)
                 except Exception as e:
                     summarization_ns.logger.error(e)
                     summary = ""
@@ -103,6 +103,7 @@ class SummarizeClusters(Resource):
             lang = r.get('lang')
             method = r.get('method', "weighted")
             clustered_docs = r.get('clustered_docs')
+            weights =  r.get('weights', (1.0, 0))
             if lang == 'en':
                 stops = stopwords.words('english')
             if lang == 'de':
@@ -114,29 +115,7 @@ class SummarizeClusters(Resource):
                 tfidf_ranks = get_tfidfranks(clustered_docs, stops)
             except Exception as e:
                 summarization_ns.logger.error(e)
-            summaries = []
-            for cluster, tfidf_scores in zip(clustered_docs, tfidf_ranks):
-                try:
-                    # get nc embeddings
-                    assert isinstance(cluster, list), "cluster not a list"
-                    payload = {}
-                    payload["sents"] = cluster
-                    embeddings = mnp.unpackb(requests.post(embed_url, json=payload).content)
-                    textrank_scores = get_textrank(cluster, embeddings)
-                except Exception as e:
-                    summarization_ns.logger.error(e)
-                    textrank_scores = [[1, token] for token in cluster]
-                df1 = pd.DataFrame(textrank_scores, columns=['textrank', 'token'])
-                df2 = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
-                df = pd.merge(df1, df2, on='token')
-
-                # implemented weighted and 2+1 methods here
-                try:
-                    summary = get_summary(df, method, weights=(0.5, 0.5), top_n=top_n)
-                except Exception as e:
-                    summarization_ns.logger.error(e)
-                    summary = ""
-                summaries.append(summary)
+            summaries = get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs)
             result["summaries"] = summaries
             result["success"] = True
             return make_response(jsonify(result),
@@ -150,7 +129,49 @@ class SummarizeClusters(Resource):
                                  headers)
 
 
-def get_summary(df, method, weights=(0.5, 0.5), top_n=3):
+def get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs):
+    summaries = []
+    if method == 'tfidf':
+        for cluster, tfidf_scores in zip(clustered_docs, tfidf_ranks):
+            df = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
+            ct = pd.DataFrame(columns = df.token, index=df.token)
+            ct.fillna(ct.index.to_series(), inplace=True)
+            for t in df.token.tolist():
+                ct.loc[t] = ct.loc[t].map(lambda x: 1 if x.lower() in t.lower() else 0).values*df.tfidf.values
+            df["tfidf"] = ct.sum(axis=1).values
+            summary = []
+            for candidate in df.sort_values('tfidf', ascending=False)['token']:
+                if candidate.lower() not in [s.lower() for s in summary]:
+                    summary.append(candidate.replace(" - ", "-"))
+            summary = ", ".join(summary[:top_n])
+            summaries.append(summary)        
+    else:
+        for cluster, tfidf_scores in zip(clustered_docs, tfidf_ranks):
+            try:
+                # get nc embeddings
+                assert isinstance(cluster, list), "cluster not a list"
+                payload = {}
+                payload["sents"] = cluster
+                embeddings = mnp.unpackb(requests.post(embed_url, json=payload).content)
+                textrank_scores = get_textrank(cluster, embeddings)
+            except Exception as e:
+                summarization_ns.logger.error(e)
+                textrank_scores = [[1, token] for token in cluster]
+            df1 = pd.DataFrame(textrank_scores, columns=['textrank', 'token'])
+            df2 = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
+            df = pd.merge(df1, df2, on='token')
+            # implemented weighted and 2+1 methods here
+            try:
+                summary = get_document_summary(df, method, weights=(0.5, 0.5), top_n=top_n)
+            except Exception as e:
+                summarization_ns.logger.error(e)
+                summary = ""
+            summaries.append(summary)
+    return summaries
+
+
+
+def get_document_summary(df, method, weights=(0.5, 0.5), top_n=3):
     """
     scores are rescaled to [0, 1]
 
