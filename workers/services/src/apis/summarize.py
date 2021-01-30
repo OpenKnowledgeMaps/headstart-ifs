@@ -134,6 +134,7 @@ def get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs):
     if method == 'tfidf':
         for cluster, tfidf_scores in zip(clustered_docs, tfidf_ranks):
             df = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
+            df = df[df.token.map(lambda x: len(x.split())) <= 3]
             ct = pd.DataFrame(columns = df.token, index=df.token)
             ct.fillna(ct.index.to_series(), inplace=True)
             for t in df.token.tolist():
@@ -141,7 +142,7 @@ def get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs):
             df["tfidf"] = ct.sum(axis=1).values
             summary = []
             for candidate in df.sort_values('tfidf', ascending=False)['token']:
-                if candidate.lower() not in [s.lower() for s in summary]:
+                if len(list(filter(lambda x: candidate.lower() in x.lower(), summary))) == 0:
                     summary.append(candidate.replace(" - ", "-"))
             summary = ", ".join(summary[:top_n])
             summaries.append(summary)        
