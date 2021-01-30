@@ -14,6 +14,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.preprocessing import normalize
 from nltk.corpus import stopwords
 import requests
+import re
 
 
 mnp.patch()
@@ -22,6 +23,8 @@ with open("redis_config.json") as infile:
 
 redis_store = redis.StrictRedis(**redis_config)
 embed_url = "http://localhost/ifs/enrich/sent_embed/gusem"
+remove_digits = re.compile(r"^\d | \d+ | \d$")
+
 
 summarization_ns = Namespace("summarize", description="OKMAps summarization operations")
 
@@ -238,12 +241,14 @@ def get_tfidfranks(docs, stops):
     assert isinstance(docs, list), "cluster not a list"
     for d in docs:
         assert isinstance(d, list), "doc not a list"
-    docs = [" ".join([t.replace(" ", "_") for t in d])
+    docs = [[remove_digits.sub(" ", t).strip() for t in d]
+            for d in docs]
+    docs = [" ".join([t.replace("-", "__").replace(" ", "_") for t in d])
             for d in docs]
     cv = CountVectorizer(lowercase=False, stop_words=stops)
     word_count_vector = cv.fit_transform(docs)
     token_names = cv.get_feature_names()
-    token_names = [t.replace("_", " ") for t in token_names]
+    token_names = [t.replace("__", "-").replace("_", " ") for t in token_names]
     tfidf = TfidfTransformer(smooth_idf=True, use_idf=True)
     tfidf_matrix = tfidf.fit(word_count_vector)
     rankings = []
