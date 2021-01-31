@@ -62,7 +62,6 @@ class SpacyNLP(object):
 
     def sent_tokenize(self, docs, lang):
         assert isinstance(docs, list)
-        self.logger.debug(docs)
         for d in docs:
             assert isinstance(d, str), "assert failed: isinstance(doc, str)"
         if lang in core_models:
@@ -70,14 +69,11 @@ class SpacyNLP(object):
         else:
             nlp = self.pipes["sent_tokenize"]["en"]
         tokenized_docs = [d for d in nlp.pipe(docs, batch_size=100, n_threads=5)]
-        self.logger.debug(tokenized_docs)
         sents = [[s.text for s in d.sents] for d in tokenized_docs]
-        self.logger.debug(sents)
         return sents
 
     def tokenize_docs(self, docs, lang):
         assert isinstance(docs, list)
-        self.logger.debug(docs)
         for d in docs:
             assert isinstance(d, str), "assert failed: isinstance(doc, str)"
         if lang in core_models:
@@ -99,6 +95,8 @@ class SpacyNLP(object):
     def run(self):
         while True:
             k, docs, lang, tasks = self.next_item()
+            if isinstance(docs, str):
+                docs = [docs]
             try:
                 res = {}
                 res["id"] = k
@@ -109,6 +107,7 @@ class SpacyNLP(object):
                 self.redis_store.set(k, json.dumps(res))
             except Exception as e:
                 self.logger.error(e)
+                self.logger.error(docs)
 
 
 def remove_stops(phrase):

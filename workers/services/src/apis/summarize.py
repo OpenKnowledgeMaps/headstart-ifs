@@ -23,7 +23,7 @@ with open("redis_config.json") as infile:
 
 redis_store = redis.StrictRedis(**redis_config)
 embed_url = "http://localhost/ifs/enrich/sent_embed/gusem"
-remove_digits = re.compile(r"^\d | \d+ | \d$")
+remove_digits = re.compile(r"^\d+ | \d+ | \d+$")
 
 
 summarization_ns = Namespace("summarize", description="OKMAps summarization operations")
