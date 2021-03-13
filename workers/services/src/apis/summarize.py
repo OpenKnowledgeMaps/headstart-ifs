@@ -114,12 +114,10 @@ class SummarizeClusters(Resource):
             else:
                 stops = []
 
-            try:
-                tfidf_ranks = get_tfidfranks(clustered_docs, stops)
-            except Exception as e:
-                summarization_ns.logger.error(e)
-            summaries = get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs)
+            tfidf_ranks = get_tfidfranks(clustered_docs, stops)
+            summaries, summary_scores = get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs)
             result["summaries"] = summaries
+            result["summary_scores"] = summary_scores
             result["success"] = True
             return make_response(jsonify(result),
                                  200,
@@ -134,9 +132,11 @@ class SummarizeClusters(Resource):
 
 def get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs):
     summaries = []
+    summary_scores = []
     if method == 'tfidf':
         for cluster, tfidf_scores in zip(clustered_docs, tfidf_ranks):
             df = pd.DataFrame(tfidf_scores, columns=['tfidf', 'token'])
+            #df['tfidf'] = df['tfidf'] / max_score
             df = df[df.token.map(lambda x: len(x.split())) <= 3]
             ct = pd.DataFrame(columns = df.token, index=df.token)
             ct.fillna(ct.index.to_series(), inplace=True)
@@ -144,11 +144,16 @@ def get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs):
                 ct.loc[t] = ct.loc[t].map(lambda x: 1 if x.lower() in t.lower() else 0).values*df.tfidf.values
             df["tfidf"] = ct.sum(axis=1).values
             summary = []
-            for candidate in df.sort_values('tfidf', ascending=False)['token']:
-                if len(list(filter(lambda x: candidate.lower() in x.lower(), summary))) == 0:
-                    summary.append(candidate.replace(" - ", "-"))
+            score = 0
+            for _, candidate in df.sort_values('tfidf', ascending=False).iterrows():
+                candidate_token = candidate['token']
+                candidate_score = candidate['tfidf']
+                if len(list(filter(lambda x: candidate_token.lower() in x.lower(), summary))) == 0:
+                    summary.append(candidate_token.replace(" - ", "-"))
+                    score += candidate_score
             summary = ", ".join(summary[:top_n])
-            summaries.append(summary)        
+            summaries.append(summary)
+            summary_scores.append(score)
     else:
         for cluster, tfidf_scores in zip(clustered_docs, tfidf_ranks):
             try:
@@ -171,7 +176,8 @@ def get_cluster_summaries(method, tfidf_ranks, weights, top_n, clustered_docs):
                 summarization_ns.logger.error(e)
                 summary = ""
             summaries.append(summary)
-    return summaries
+    summary_scores = [s / max(summary_scores) for s in summary_scores]
+    return summaries, summary_scores
 
 
 
